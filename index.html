@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Max's Kanban Board</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin: 20px auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        .kanban-board {
+            display: flex;
+            justify-content: space-around;
+            padding: 20px;
+        }
+
+        .kanban-column {
+            background-color: #e9e9e9;
+            border-radius: 5px;
+            width: 300px;
+            padding: 15px;
+            margin: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .kanban-column h2 {
+            text-align: center;
+            color: #555;
+            margin-bottom: 15px;
+        }
+
+        .kanban-item {
+            background-color: white;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            cursor: grab;
+        }
+
+        .kanban-item h3 {
+            color: #333;
+            margin-top: 0;
+            margin-bottom: 5px;
+        }
+
+        .kanban-item p {
+            color: #666;
+            margin: 0;
+            font-size: 0.9em;
+        }
+
+        /* Basic Drag and Drop Styling */
+        .kanban-item.dragging {
+            opacity: 0.5;
+        }
+
+        .kanban-column.dragover {
+            background-color: #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Max's Kanban Board</h1>
+        <div class="kanban-board">
+            <div class="kanban-column" id="todo" data-status="todo">
+                <h2>To Do</h2>
+            </div>
+            <div class="kanban-column" id="in-progress" data-status="in-progress">
+                <h2>In Progress</h2>
+            </div>
+            <div class="kanban-column" id="done" data-status="done">
+                <h2>Done</h2>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const tasks = [
+            { id: 1, title: 'Resolve Google API Issue', description: 'Troubleshoot and fix connection to Google services.', status: 'todo' },
+            { id: 2, title: 'Enhance Self-Repair Capabilities', description: 'Improve the bots ability to recover from errors.', status: 'in-progress' }
+        ];
+
+        function renderTasks() {
+            const columns = document.querySelectorAll('.kanban-column');
+            columns.forEach(column => {
+                column.innerHTML = '<h2>' + column.dataset.status.toUpperCase().replace('-', ' ') + '</h2>'; // Clear existing content and add header
+            });
+
+            tasks.forEach(task => {
+                const column = document.querySelector(`.kanban-column[data-status="${task.status}"]`);
+                if (column) {
+                    const taskDiv = document.createElement('div');
+                    taskDiv.classList.add('kanban-item');
+                    taskDiv.setAttribute('data-task-id', task.id);
+                    taskDiv.innerHTML = `<h3>${task.title}</h3><p>${task.description}</p>`;
+                    column.appendChild(taskDiv);
+                }
+            });
+        }
+
+        renderTasks();
+    </script>
+</body>
+</html>
