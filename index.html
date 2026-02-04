@@ -1,119 +1,758 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Max's Kanban Board</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Max's Project Tracker</title>
     <style>
-        body {
-            font-family: sans-serif;
-            background-color: #f4f4f4;
+        * {
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
         }
 
-        .container {
-            width: 90%;
-            max-width: 1200px;
-            margin: 20px auto;
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
         }
 
-        h1 {
-            text-align: center;
-            color: #333;
-        }
-
-        .kanban-board {
-            display: flex;
-            justify-content: space-around;
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
             padding: 20px;
-        }
-
-        .kanban-column {
-            background-color: #e9e9e9;
-            border-radius: 5px;
-            width: 300px;
-            padding: 15px;
-            margin: 10px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-
-        .kanban-column h2 {
             text-align: center;
-            color: #555;
-            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .kanban-item {
-            background-color: white;
-            border-radius: 5px;
-            padding: 10px;
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .header p {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .board {
+            display: flex;
+            gap: 20px;
+            padding: 30px;
+            overflow-x: auto;
+            min-height: calc(100vh - 100px);
+        }
+
+        .column {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            min-width: 320px;
+            max-width: 320px;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .column-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .column-header h2 {
+            font-size: 1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .column-header .count {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+        }
+
+        .column.todo .column-header h2 { color: #f59e0b; }
+        .column.in-progress .column-header h2 { color: #3b82f6; }
+        .column.done .column-header h2 { color: #10b981; }
+
+        .task-container {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            min-height: 200px;
+        }
+
+        .task-container.dragover {
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 15px;
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 0.9rem;
+        }
+
+        .task {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 15px;
             margin-bottom: 10px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             cursor: grab;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.2s ease;
         }
 
-        .kanban-item h3 {
-            color: #333;
-            margin-top: 0;
-            margin-bottom: 5px;
+        .task:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
 
-        .kanban-item p {
-            color: #666;
-            margin: 0;
-            font-size: 0.9em;
-        }
-
-        /* Basic Drag and Drop Styling */
-        .kanban-item.dragging {
+        .task.dragging {
             opacity: 0.5;
+            transform: rotate(3deg);
         }
 
-        .kanban-column.dragover {
-            background-color: #ddd;
+        .task.drop-above {
+            border-top: 3px solid #3b82f6;
+        }
+
+        .task.drop-below {
+            border-bottom: 3px solid #3b82f6;
+        }
+
+        .task-title {
+            font-weight: 500;
+            margin-bottom: 8px;
+            word-wrap: break-word;
+        }
+
+        .task-desc {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 10px;
+            word-wrap: break-word;
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .task-actions button {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.8);
+            transition: all 0.2s;
+        }
+
+        .task-actions button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .task-actions .delete-btn:hover {
+            background: rgba(239, 68, 68, 0.5);
+        }
+
+        .add-task-form {
+            padding: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .add-task-btn {
+            width: 100%;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            color: rgba(255, 255, 255, 0.6);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+
+        .add-task-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.5);
+            color: #fff;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: #1a1a2e;
+            border-radius: 12px;
+            padding: 25px;
+            width: 90%;
+            max-width: 400px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal h3 {
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+        }
+
+        .modal input,
+        .modal textarea {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        .modal input::placeholder,
+        .modal textarea::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .modal input:focus,
+        .modal textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .modal textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .modal-actions button {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .modal-actions .cancel-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        .modal-actions .save-btn {
+            background: #3b82f6;
+            color: #fff;
+        }
+
+        .modal-actions button:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .board {
+                padding: 15px;
+            }
+            .column {
+                min-width: 280px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Max's Kanban Board</h1>
-        <div class="kanban-board">
-            <div class="kanban-column" id="todo" data-status="todo">
-                <h2>To Do</h2>
+    <div class="header">
+        <h1>🛠️ Max's Project Tracker</h1>
+        <p>Drag & drop tasks between columns</p>
+    </div>
+
+    <div class="board" id="board">
+        <div class="column todo" data-status="todo">
+            <div class="column-header">
+                <h2 id="todo-header">📋 To Do <span class="count" id="todo-count">0</span></h2>
             </div>
-            <div class="kanban-column" id="in-progress" data-status="in-progress">
-                <h2>In Progress</h2>
+            <div class="task-container" id="todo-tasks" aria-labelledby="todo-header"></div>
+            <div class="add-task-form">
+                <button class="add-task-btn" data-status="todo">+ Add Task</button>
             </div>
-            <div class="kanban-column" id="done" data-status="done">
-                <h2>Done</h2>
+        </div>
+
+        <div class="column in-progress" data-status="in-progress">
+            <div class="column-header">
+                <h2 id="in-progress-header">⚡ In Progress <span class="count" id="in-progress-count">0</span></h2>
+            </div>
+            <div class="task-container" id="in-progress-tasks" aria-labelledby="in-progress-header"></div>
+            <div class="add-task-form">
+                <button class="add-task-btn" data-status="in-progress">+ Add Task</button>
+            </div>
+        </div>
+
+        <div class="column done" data-status="done">
+            <div class="column-header">
+                <h2 id="done-header">✅ Done <span class="count" id="done-count">0</span></h2>
+            </div>
+            <div class="task-container" id="done-tasks" aria-labelledby="done-header"></div>
+            <div class="add-task-form">
+                <button class="add-task-btn" data-status="done">+ Add Task</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Add/Edit Task -->
+    <div class="modal-overlay" id="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal">
+            <h3 id="modal-title">Add Task</h3>
+            <input type="text" id="task-title-input" placeholder="Task title..." maxlength="100" aria-label="Task title">
+            <textarea id="task-desc-input" placeholder="Description (optional)..." maxlength="500" aria-label="Task description"></textarea>
+            <input type="hidden" id="task-id">
+            <input type="hidden" id="task-status">
+            <div class="modal-actions">
+                <button class="cancel-btn" id="modal-cancel-btn">Cancel</button>
+                <button class="save-btn" id="modal-save-btn">Save</button>
             </div>
         </div>
     </div>
 
     <script>
-        const tasks = [
-            { id: 1, title: 'Resolve Google API Issue', description: 'Troubleshoot and fix connection to Google services.', status: 'todo' },
-            { id: 2, title: 'Enhance Self-Repair Capabilities', description: 'Improve the bots ability to recover from errors.', status: 'in-progress' }
-        ];
+    (function() {
+        'use strict';
 
-        function renderTasks() {
-            const columns = document.querySelectorAll('.kanban-column');
-            columns.forEach(column => {
-                column.innerHTML = '<h2>' + column.dataset.status.toUpperCase().replace('-', ' ') + '</h2>'; // Clear existing content and add header
+        // Generate secure unique ID
+        function generateId() {
+            if (crypto.randomUUID) {
+                return 'task-' + crypto.randomUUID();
+            }
+            // Fallback for older browsers
+            return 'task-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        }
+
+        // Initialize tasks from localStorage or empty array
+        let tasks = [];
+        try {
+            tasks = JSON.parse(localStorage.getItem('kanban-tasks')) || [];
+        } catch (e) {
+            console.error('Failed to parse tasks from localStorage:', e);
+            tasks = [];
+        }
+
+        // Track the button that opened the modal for focus return
+        let modalTriggerButton = null;
+
+        // Drag and drop state
+        let draggedTaskId = null;
+        let dropTargetId = null;
+        let dropPosition = null; // 'above' or 'below'
+
+        // DOM Elements
+        const modalOverlay = document.getElementById('modal-overlay');
+        const modalTitle = document.getElementById('modal-title');
+        const taskTitleInput = document.getElementById('task-title-input');
+        const taskDescInput = document.getElementById('task-desc-input');
+        const taskIdInput = document.getElementById('task-id');
+        const taskStatusInput = document.getElementById('task-status');
+        const modalCancelBtn = document.getElementById('modal-cancel-btn');
+        const modalSaveBtn = document.getElementById('modal-save-btn');
+
+        // DOM ready
+        document.addEventListener('DOMContentLoaded', init);
+
+        function init() {
+            renderAllTasks();
+            initDragAndDrop();
+            initEventListeners();
+        }
+
+        function initEventListeners() {
+            // Add task buttons
+            document.querySelectorAll('.add-task-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    modalTriggerButton = this;
+                    openModal(this.dataset.status);
+                });
             });
 
-            tasks.forEach(task => {
-                const column = document.querySelector(`.kanban-column[data-status="${task.status}"]`);
-                if (column) {
-                    const taskDiv = document.createElement('div');
-                    taskDiv.classList.add('kanban-item');
-                    taskDiv.setAttribute('data-task-id', task.id);
-                    taskDiv.innerHTML = `<h3>${task.title}</h3><p>${task.description}</p>`;
-                    column.appendChild(taskDiv);
+            // Modal buttons
+            modalCancelBtn.addEventListener('click', closeModal);
+            modalSaveBtn.addEventListener('click', saveTask);
+
+            // Close modal on overlay click
+            modalOverlay.addEventListener('click', function(e) {
+                if (e.target === modalOverlay) {
+                    closeModal();
+                }
+            });
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && modalOverlay.classList.contains('active')) {
+                    closeModal();
+                }
+                // Enter to save (but not in textarea)
+                if (e.key === 'Enter' && modalOverlay.classList.contains('active')) {
+                    if (document.activeElement !== taskDescInput) {
+                        e.preventDefault();
+                        saveTask();
+                    }
                 }
             });
         }
 
-        renderTasks();
+        // Save to localStorage
+        function saveTasks() {
+            try {
+                localStorage.setItem('kanban-tasks', JSON.stringify(tasks));
+            } catch (e) {
+                console.error('Failed to save tasks:', e);
+            }
+        }
+
+        // Render all tasks
+        function renderAllTasks() {
+            const statuses = ['todo', 'in-progress', 'done'];
+            
+            statuses.forEach(status => {
+                const container = document.getElementById(`${status}-tasks`);
+                const countEl = document.getElementById(`${status}-count`);
+                const statusTasks = tasks.filter(t => t.status === status);
+                
+                // Sort by order property
+                statusTasks.sort((a, b) => (a.order || 0) - (b.order || 0));
+                
+                container.innerHTML = '';
+                countEl.textContent = statusTasks.length;
+                
+                if (statusTasks.length === 0) {
+                    const emptyState = document.createElement('div');
+                    emptyState.className = 'empty-state';
+                    emptyState.textContent = 'No tasks yet';
+                    container.appendChild(emptyState);
+                } else {
+                    statusTasks.forEach(task => {
+                        container.appendChild(createTaskElement(task));
+                    });
+                }
+            });
+        }
+
+        // Create task DOM element (secure - no inline handlers)
+        function createTaskElement(task) {
+            const div = document.createElement('div');
+            div.className = 'task';
+            div.draggable = true;
+            div.dataset.taskId = task.id;
+
+            // Title
+            const title = document.createElement('div');
+            title.className = 'task-title';
+            title.textContent = task.title;
+            div.appendChild(title);
+
+            // Description
+            if (task.description) {
+                const desc = document.createElement('div');
+                desc.className = 'task-desc';
+                desc.textContent = task.description;
+                div.appendChild(desc);
+            }
+
+            // Actions
+            const actions = document.createElement('div');
+            actions.className = 'task-actions';
+
+            const editBtn = document.createElement('button');
+            editBtn.textContent = '✏️ Edit';
+            editBtn.setAttribute('aria-label', `Edit task: ${task.title}`);
+            editBtn.addEventListener('click', function() {
+                modalTriggerButton = this;
+                editTask(task.id);
+            });
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.textContent = '🗑️ Delete';
+            deleteBtn.setAttribute('aria-label', `Delete task: ${task.title}`);
+            deleteBtn.addEventListener('click', function() {
+                deleteTask(task.id);
+            });
+
+            actions.appendChild(editBtn);
+            actions.appendChild(deleteBtn);
+            div.appendChild(actions);
+
+            // Drag events
+            div.addEventListener('dragstart', handleDragStart);
+            div.addEventListener('dragend', handleDragEnd);
+            div.addEventListener('dragover', handleTaskDragOver);
+            div.addEventListener('dragleave', handleTaskDragLeave);
+            div.addEventListener('drop', handleTaskDrop);
+
+            return div;
+        }
+
+        // Modal functions
+        function openModal(status, taskId) {
+            if (taskId) {
+                // Edit mode
+                const task = tasks.find(t => t.id === taskId);
+                if (task) {
+                    modalTitle.textContent = 'Edit Task';
+                    taskTitleInput.value = task.title;
+                    taskDescInput.value = task.description || '';
+                    taskIdInput.value = task.id;
+                    taskStatusInput.value = task.status;
+                }
+            } else {
+                // Add mode
+                modalTitle.textContent = 'Add Task';
+                taskTitleInput.value = '';
+                taskDescInput.value = '';
+                taskIdInput.value = '';
+                taskStatusInput.value = status;
+            }
+            
+            modalOverlay.classList.add('active');
+            taskTitleInput.focus();
+        }
+
+        function closeModal() {
+            modalOverlay.classList.remove('active');
+            // Return focus to the button that opened the modal
+            if (modalTriggerButton) {
+                modalTriggerButton.focus();
+                modalTriggerButton = null;
+            }
+        }
+
+        function saveTask() {
+            const title = taskTitleInput.value.trim();
+            if (!title) {
+                taskTitleInput.focus();
+                return;
+            }
+            
+            const taskId = taskIdInput.value;
+            
+            if (taskId) {
+                // Update existing task
+                const task = tasks.find(t => t.id === taskId);
+                if (task) {
+                    task.title = title;
+                    task.description = taskDescInput.value.trim();
+                    task.updatedAt = Date.now();
+                }
+            } else {
+                // Create new task - add to end of column
+                const status = taskStatusInput.value;
+                const statusTasks = tasks.filter(t => t.status === status);
+                const maxOrder = statusTasks.reduce((max, t) => Math.max(max, t.order || 0), 0);
+                
+                const newTask = {
+                    id: generateId(),
+                    title: title,
+                    description: taskDescInput.value.trim(),
+                    status: status,
+                    order: maxOrder + 1,
+                    createdAt: Date.now(),
+                    updatedAt: Date.now()
+                };
+                tasks.push(newTask);
+            }
+            
+            saveTasks();
+            renderAllTasks();
+            closeModal();
+        }
+
+        function editTask(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (task) {
+                openModal(task.status, taskId);
+            }
+        }
+
+        function deleteTask(taskId) {
+            if (confirm('Delete this task?')) {
+                tasks = tasks.filter(t => t.id !== taskId);
+                saveTasks();
+                renderAllTasks();
+            }
+        }
+
+        // Drag and Drop
+        function initDragAndDrop() {
+            const containers = document.querySelectorAll('.task-container');
+            
+            containers.forEach(container => {
+                container.addEventListener('dragover', handleContainerDragOver);
+                container.addEventListener('dragleave', handleContainerDragLeave);
+                container.addEventListener('drop', handleContainerDrop);
+            });
+        }
+
+        function handleDragStart(e) {
+            draggedTaskId = e.target.dataset.taskId;
+            e.target.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', draggedTaskId);
+        }
+
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+            draggedTaskId = null;
+            dropTargetId = null;
+            dropPosition = null;
+            
+            // Remove all visual states
+            document.querySelectorAll('.task-container').forEach(c => {
+                c.classList.remove('dragover');
+            });
+            document.querySelectorAll('.task').forEach(t => {
+                t.classList.remove('drop-above', 'drop-below');
+            });
+        }
+
+        function handleContainerDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            // Only show dragover if container is empty or dragging over empty space
+            const tasks = e.currentTarget.querySelectorAll('.task:not(.dragging)');
+            if (tasks.length === 0) {
+                e.currentTarget.classList.add('dragover');
+            }
+        }
+
+        function handleContainerDragLeave(e) {
+            e.currentTarget.classList.remove('dragover');
+        }
+
+        function handleContainerDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('dragover');
+            
+            // Only handle if dropping on empty container (not on a task)
+            if (e.target.classList.contains('task-container') || e.target.classList.contains('empty-state')) {
+                const taskId = e.dataTransfer.getData('text/plain');
+                const newStatus = e.currentTarget.closest('.column').dataset.status;
+                
+                const task = tasks.find(t => t.id === taskId);
+                if (task) {
+                    task.status = newStatus;
+                    task.order = 0; // Will be first in empty column
+                    task.updatedAt = Date.now();
+                    saveTasks();
+                    renderAllTasks();
+                }
+            }
+        }
+
+        function handleTaskDragOver(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (e.currentTarget.dataset.taskId === draggedTaskId) return;
+            
+            // Determine if dropping above or below based on mouse position
+            const rect = e.currentTarget.getBoundingClientRect();
+            const midpoint = rect.top + rect.height / 2;
+            
+            e.currentTarget.classList.remove('drop-above', 'drop-below');
+            
+            if (e.clientY < midpoint) {
+                e.currentTarget.classList.add('drop-above');
+                dropPosition = 'above';
+            } else {
+                e.currentTarget.classList.add('drop-below');
+                dropPosition = 'below';
+            }
+            
+            dropTargetId = e.currentTarget.dataset.taskId;
+        }
+
+        function handleTaskDragLeave(e) {
+            e.currentTarget.classList.remove('drop-above', 'drop-below');
+        }
+
+        function handleTaskDrop(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const draggedId = e.dataTransfer.getData('text/plain');
+            const targetId = e.currentTarget.dataset.taskId;
+            
+            if (draggedId === targetId) return;
+            
+            const draggedTask = tasks.find(t => t.id === draggedId);
+            const targetTask = tasks.find(t => t.id === targetId);
+            
+            if (!draggedTask || !targetTask) return;
+            
+            // Update status
+            const newStatus = e.currentTarget.closest('.column').dataset.status;
+            draggedTask.status = newStatus;
+            draggedTask.updatedAt = Date.now();
+            
+            // Reorder within the column
+            const columnTasks = tasks.filter(t => t.status === newStatus && t.id !== draggedId);
+            columnTasks.sort((a, b) => (a.order || 0) - (b.order || 0));
+            
+            // Find target index
+            let targetIndex = columnTasks.findIndex(t => t.id === targetId);
+            if (dropPosition === 'below') {
+                targetIndex++;
+            }
+            
+            // Insert at target position
+            columnTasks.splice(targetIndex, 0, draggedTask);
+            
+            // Reassign order values
+            columnTasks.forEach((t, i) => {
+                t.order = i;
+            });
+            
+            // Clean up visual states
+            e.currentTarget.classList.remove('drop-above', 'drop-below');
+            
+            saveTasks();
+            renderAllTasks();
+        }
+
+    })();
     </script>
 </body>
 </html>
