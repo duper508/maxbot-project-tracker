@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kanban</title>
+    <title>Project Tracker</title>
     <style>
         * {
             margin: 0;
@@ -13,190 +13,340 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); /* Space Blue Gradient */
             min-height: 100vh;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        /* ===== THEME: DARK BLUE (Default) ===== */
+        body.theme-dark-blue {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+        }
+
+        /* ===== THEME: LIGHT MINIMAL ===== */
+        body.theme-light {
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        /* ===== THEME: DARK COLORFUL ===== */
+        body.theme-dark-colorful {
+            background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
+            color: #fff;
+        }
+
+        /* ===== THEME: GLASSMORPHISM ===== */
+        body.theme-glass {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             color: #fff;
         }
 
         .header {
-            background: rgba(255, 255, 255, 0.1);
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             backdrop-filter: blur(10px);
-            padding: 20px;
-            text-align: center;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .theme-light .header {
+            background: rgba(255, 255, 255, 0.95);
+            border-bottom-color: rgba(0, 0, 0, 0.1);
         }
 
         .header h1 {
             font-size: 1.8rem;
             font-weight: 600;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .theme-switcher {
+            position: relative;
+        }
+
+        .theme-btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
             color: #fff;
-        }
-
-        .header p {
-            color: rgba(255, 255, 255, 0.6);
+            cursor: pointer;
             font-size: 0.9rem;
-            margin-top: 5px;
+            transition: all 0.2s;
         }
 
-        .board {
-            display: flex;
-            gap: 20px;
-            padding: 30px;
-            overflow-x: auto;
-            min-height: calc(100vh - 100px);
+        .theme-light .theme-btn {
+            border-color: rgba(0, 0, 0, 0.2);
+            background: rgba(0, 0, 0, 0.05);
+            color: #333;
         }
 
-        .column {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            min-width: 320px;
-            max-width: 320px;
-            display: flex;
-            flex-direction: column;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: none;
+        .theme-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
         }
 
-        .column-header {
-            padding: 15px 20px;
+        .theme-light .theme-btn:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .theme-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: #1a1a2e;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            margin-top: 8px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            min-width: 180px;
+        }
+
+        .theme-light .theme-menu {
+            background: #fff;
+            border-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .theme-menu.active {
+            display: block;
+        }
+
+        .theme-option {
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: background 0.2s;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 0.9rem;
+        }
+
+        .theme-light .theme-option {
+            border-bottom-color: rgba(0, 0, 0, 0.1);
+            color: #333;
+        }
+
+        .theme-option:last-child {
+            border-bottom: none;
+        }
+
+        .theme-option:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .theme-light .theme-option:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .theme-option.active {
+            background: rgba(59, 130, 246, 0.3);
+            font-weight: 600;
+        }
+
+        .container {
+            padding: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            align-items: center;
+        }
+
+        .filter-bar select, .filter-bar button {
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .theme-light .filter-bar select,
+        .theme-light .filter-bar button {
+            border-color: rgba(0, 0, 0, 0.2);
+            background: rgba(0, 0, 0, 0.05);
+            color: #333;
+        }
+
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        /* ===== PROJECT CARD - DARK BLUE ===== */
+        .theme-dark-blue .project-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* ===== PROJECT CARD - LIGHT ===== */
+        .theme-light .project-card {
+            background: #fff;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            color: #333;
+        }
+
+        /* ===== PROJECT CARD - DARK COLORFUL ===== */
+        .theme-dark-colorful .project-card {
+            background: rgba(255, 255, 255, 0.08);
+            border-left: 4px solid;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .theme-dark-colorful .project-card.cat-frontend { border-left-color: #3b82f6; }
+        .theme-dark-colorful .project-card.cat-backend { border-left-color: #8b5cf6; }
+        .theme-dark-colorful .project-card.cat-devops { border-left-color: #10b981; }
+        .theme-dark-colorful .project-card.cat-other { border-left-color: #f59e0b; }
+
+        /* ===== PROJECT CARD - GLASS ===== */
+        .theme-glass .project-card {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .project-card {
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .project-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .theme-dark-blue .project-card:hover,
+        .theme-glass .project-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .theme-light .project-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .theme-dark-colorful .project-card:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .project-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: start;
+            margin-bottom: 15px;
         }
 
-        .column-header h2 {
-            font-size: 1rem;
+        .project-name {
+            font-size: 1.2rem;
             font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 8px;
         }
 
-        .column-header .count {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 2px 8px;
-            border-radius: 10px;
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
             font-size: 0.8rem;
-            color: #fff;
-        }
-
-        /* Blue Theme Accents */
-        .column.todo .column-header h2 { color: #f59e0b; } /* Amber */
-        .column.in-progress .column-header h2 { color: #3b82f6; } /* Blue */
-        .column.done .column-header h2 { color: #10b981; } /* Emerald */
-
-        .task-container {
-            flex: 1;
-            padding: 15px;
-            overflow-y: auto;
-            min-height: 200px;
-        }
-
-        .task-container.dragover {
-            background: rgba(255, 255, 255, 0.08);
-            border: 2px dashed rgba(255, 255, 255, 0.3);
-            border-radius: 8px;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 30px 15px;
-            color: rgba(255, 255, 255, 0.3);
-            font-size: 0.9rem;
-        }
-
-        .task {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 10px;
-            cursor: grab;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.2s ease;
-        }
-
-        .task:hover {
-            background: rgba(255, 255, 255, 0.15);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            border-color: rgba(255, 255, 255, 0.1);
-        }
-
-        .task.dragging {
-            opacity: 0.5;
-            transform: rotate(3deg);
-        }
-
-        .task.drop-above {
-            border-top: 3px solid #3b82f6;
-        }
-
-        .task.drop-below {
-            border-bottom: 3px solid #3b82f6;
-        }
-
-        .task-title {
             font-weight: 500;
-            margin-bottom: 8px;
-            word-wrap: break-word;
-            color: #fff;
         }
 
-        .task-desc {
+        .status-planning { background: rgba(249, 115, 22, 0.3); color: #f97316; }
+        .status-inprogress { background: rgba(59, 130, 246, 0.3); color: #3b82f6; }
+        .status-complete { background: rgba(16, 185, 129, 0.3); color: #10b981; }
+
+        .project-description {
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+            opacity: 0.8;
+            line-height: 1.4;
+        }
+
+        .project-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
             font-size: 0.85rem;
-            color: rgba(255, 255, 255, 0.6);
-            margin-bottom: 10px;
-            word-wrap: break-word;
         }
 
-        .task-actions {
+        .stat-item {
+            text-align: center;
+            padding: 8px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .theme-light .stat-item {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .stat-label {
+            opacity: 0.7;
+            font-size: 0.75rem;
+        }
+
+        .stat-value {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .theme-light .progress-bar {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            transition: width 0.3s ease;
+        }
+
+        .project-actions {
             display: flex;
             gap: 8px;
-            justify-content: flex-end;
         }
 
-        .task-actions button {
-            background: rgba(255, 255, 255, 0.1);
+        .action-btn {
+            flex: 1;
+            padding: 8px;
+            border-radius: 6px;
             border: none;
-            padding: 5px 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 0.75rem;
-            color: rgba(255, 255, 255, 0.8);
-            transition: all 0.2s;
-        }
-
-        .task-actions button:hover {
-            background: rgba(255, 255, 255, 0.2);
-            color: #fff;
-        }
-
-        .task-actions .delete-btn:hover {
-            background: rgba(239, 68, 68, 0.5); /* Red */
-        }
-
-        .add-task-form {
-            padding: 15px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .add-task-btn {
-            width: 100%;
-            padding: 10px;
             background: rgba(255, 255, 255, 0.1);
-            border: 1px dashed rgba(255, 255, 255, 0.3);
-            border-radius: 8px;
-            color: rgba(255, 255, 255, 0.6);
+            color: #fff;
             cursor: pointer;
+            font-size: 0.8rem;
             transition: all 0.2s;
-            font-size: 0.9rem;
         }
 
-        .add-task-btn:hover {
-            background: rgba(255, 255, 255, 0.15);
-            border-color: rgba(255, 255, 255, 0.5);
-            color: #fff;
+        .theme-light .action-btn {
+            background: rgba(0, 0, 0, 0.1);
+            color: #333;
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .theme-light .action-btn:hover {
+            background: rgba(0, 0, 0, 0.15);
         }
 
         /* Modal */
@@ -209,7 +359,7 @@
             bottom: 0;
             background: rgba(0, 0, 0, 0.7);
             backdrop-filter: blur(5px);
-            z-index: 1000;
+            z-index: 2000;
             justify-content: center;
             align-items: center;
         }
@@ -221,45 +371,58 @@
         .modal {
             background: #1a1a2e;
             border-radius: 12px;
-            padding: 25px;
+            padding: 30px;
             width: 90%;
-            max-width: 400px;
+            max-width: 600px;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: none;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .theme-light .modal {
+            background: #fff;
+            border-color: rgba(0, 0, 0, 0.1);
+            color: #333;
         }
 
         .modal h3 {
             margin-bottom: 20px;
-            font-size: 1.2rem;
-            color: #fff;
+            font-size: 1.3rem;
         }
 
-        .modal input,
-        .modal textarea {
-            width: 100%;
-            padding: 12px;
+        .form-group {
             margin-bottom: 15px;
-            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
             border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
-            color: #fff;
-            font-size: 1rem;
-            font-family: inherit;
-        }
-
-        .modal input::placeholder,
-        .modal textarea::placeholder {
-            color: rgba(255, 255, 255, 0.4);
-        }
-
-        .modal input:focus,
-        .modal textarea:focus {
-            outline: none;
-            border-color: #3b82f6; /* Blue focus */
             background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-family: inherit;
+            font-size: 1rem;
         }
 
-        .modal textarea {
+        .theme-light .form-group input,
+        .theme-light .form-group select,
+        .theme-light .form-group textarea {
+            border-color: rgba(0, 0, 0, 0.2);
+            background: rgba(0, 0, 0, 0.05);
+            color: #333;
+        }
+
+        .form-group textarea {
             min-height: 100px;
             resize: vertical;
         }
@@ -268,97 +431,129 @@
             display: flex;
             gap: 10px;
             justify-content: flex-end;
+            margin-top: 25px;
         }
 
-        .modal-actions button {
+        .modal-btn {
             padding: 10px 20px;
-            border-radius: 8px;
+            border-radius: 6px;
             border: none;
             cursor: pointer;
             font-size: 0.9rem;
             transition: all 0.2s;
         }
 
-        .modal-actions .cancel-btn {
+        .btn-cancel {
             background: rgba(255, 255, 255, 0.1);
             color: #fff;
         }
 
-        .modal-actions .save-btn {
-            background: #3b82f6; /* Blue */
+        .theme-light .btn-cancel {
+            background: rgba(0, 0, 0, 0.1);
+            color: #333;
+        }
+
+        .btn-save {
+            background: #3b82f6;
             color: #fff;
-            font-weight: 500;
         }
 
-        .modal-actions .save-btn:hover {
+        .btn-save:hover {
             background: #2563eb;
-        }
-
-        .modal-actions button:hover {
-            opacity: 0.9;
-            transform: translateY(-1px);
         }
 
         /* Responsive */
         @media (max-width: 768px) {
-            .board {
-                padding: 15px;
+            .projects-grid {
+                grid-template-columns: 1fr;
             }
-            .column {
-                min-width: 280px;
+            
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .header h1 {
+                font-size: 1.4rem;
             }
         }
     </style>
 </head>
-<body>
+<body class="theme-dark-blue">
     <div class="header">
-        <h1>🛠️ Kanban</h1>
-        <p>Drag & drop tasks between columns</p>
-    </div>
-
-    <div class="board" id="board">
-        <div class="column todo" data-status="todo">
-            <div class="column-header">
-                <h2 id="todo-header">📋 To Do <span class="count" id="todo-count">0</span></h2>
+        <h1>📊 Project Tracker</h1>
+        <div class="header-controls">
+            <div class="theme-switcher">
+                <button class="theme-btn" id="theme-toggle">🎨 Theme</button>
+                <div class="theme-menu" id="theme-menu">
+                    <div class="theme-option active" data-theme="theme-dark-blue">🌙 Dark Blue</div>
+                    <div class="theme-option" data-theme="theme-light">☀️ Light Minimal</div>
+                    <div class="theme-option" data-theme="theme-dark-colorful">🎨 Dark Colorful</div>
+                    <div class="theme-option" data-theme="theme-glass">✨ Glassmorphism</div>
+                </div>
             </div>
-            <div class="task-container" id="todo-tasks" aria-labelledby="todo-header"></div>
-            <div class="add-task-form">
-                <button class="add-task-btn" data-status="todo">+ Add Task</button>
-            </div>
-        </div>
-
-        <div class="column in-progress" data-status="in-progress">
-            <div class="column-header">
-                <h2 id="in-progress-header">⚡ In Progress <span class="count" id="in-progress-count">0</span></h2>
-            </div>
-            <div class="task-container" id="in-progress-tasks" aria-labelledby="in-progress-header"></div>
-            <div class="add-task-form">
-                <button class="add-task-btn" data-status="in-progress">+ Add Task</button>
-            </div>
-        </div>
-
-        <div class="column done" data-status="done">
-            <div class="column-header">
-                <h2 id="done-header">✅ Done <span class="count" id="done-count">0</span></h2>
-            </div>
-            <div class="task-container" id="done-tasks" aria-labelledby="done-header"></div>
-            <div class="add-task-form">
-                <button class="add-task-btn" data-status="done">+ Add Task</button>
-            </div>
+            <button id="add-project-btn" class="theme-btn">+ New Project</button>
         </div>
     </div>
 
-    <!-- Modal for Add/Edit Task -->
-    <div class="modal-overlay" id="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="container">
+        <div class="filter-bar">
+            <select id="category-filter">
+                <option value="">All Categories</option>
+                <option value="frontend">Frontend</option>
+                <option value="backend">Backend</option>
+                <option value="devops">DevOps</option>
+                <option value="other">Other</option>
+            </select>
+            <select id="status-filter">
+                <option value="">All Status</option>
+                <option value="planning">Planning</option>
+                <option value="inprogress">In Progress</option>
+                <option value="complete">Complete</option>
+            </select>
+        </div>
+
+        <div class="projects-grid" id="projects-grid"></div>
+    </div>
+
+    <!-- Modal for Add/Edit Project -->
+    <div class="modal-overlay" id="modal-overlay">
         <div class="modal">
-            <h3 id="modal-title">Add Task</h3>
-            <input type="text" id="task-title-input" placeholder="Task title..." maxlength="100" aria-label="Task title">
-            <textarea id="task-desc-input" placeholder="Description (optional)..." maxlength="500" aria-label="Task description"></textarea>
-            <input type="hidden" id="task-id">
-            <input type="hidden" id="task-status">
+            <h3 id="modal-title">New Project</h3>
+            <div class="form-group">
+                <label>Project Name</label>
+                <input type="text" id="project-name" placeholder="e.g., Dashboard Redesign" maxlength="100">
+            </div>
+            <div class="form-group">
+                <label>Category</label>
+                <select id="project-category">
+                    <option value="frontend">Frontend</option>
+                    <option value="backend">Backend</option>
+                    <option value="devops">DevOps</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="project-description" placeholder="Describe the project..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Status</label>
+                <select id="project-status">
+                    <option value="planning">Planning</option>
+                    <option value="inprogress">In Progress</option>
+                    <option value="complete">Complete</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Progress (%)</label>
+                <input type="number" id="project-progress" min="0" max="100" value="0">
+            </div>
+            <input type="hidden" id="project-id">
             <div class="modal-actions">
-                <button class="cancel-btn" id="modal-cancel-btn">Cancel</button>
-                <button class="save-btn" id="modal-save-btn">Save</button>
+                <button class="modal-btn btn-cancel" id="modal-cancel">Cancel</button>
+                <button class="modal-btn btn-save" id="modal-save">Save Project</button>
             </div>
         </div>
     </div>
@@ -367,404 +562,277 @@
     (function() {
         'use strict';
 
-        // Generate secure unique ID
-        function generateId() {
-            if (crypto.randomUUID) {
-                return 'task-' + crypto.randomUUID();
-            }
-            // Fallback for older browsers
-            return 'task-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-        }
-
-        // Initialize tasks from localStorage or empty array
-        let tasks = [];
-        try {
-            tasks = JSON.parse(localStorage.getItem('kanban-tasks')) || [];
-        } catch (e) {
-            console.error('Failed to parse tasks from localStorage:', e);
-            tasks = [];
-        }
-
-        // Track the button that opened the modal for focus return
-        let modalTriggerButton = null;
-
-        // Drag and drop state
-        let draggedTaskId = null;
-        let dropTargetId = null;
-        let dropPosition = null; // 'above' or 'below'
+        // Data
+        let projects = [];
+        let editingId = null;
 
         // DOM Elements
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeMenu = document.getElementById('theme-menu');
+        const themeOptions = document.querySelectorAll('.theme-option');
+        const addProjectBtn = document.getElementById('add-project-btn');
+        const projectsGrid = document.getElementById('projects-grid');
         const modalOverlay = document.getElementById('modal-overlay');
         const modalTitle = document.getElementById('modal-title');
-        const taskTitleInput = document.getElementById('task-title-input');
-        const taskDescInput = document.getElementById('task-desc-input');
-        const taskIdInput = document.getElementById('task-id');
-        const taskStatusInput = document.getElementById('task-status');
-        const modalCancelBtn = document.getElementById('modal-cancel-btn');
-        const modalSaveBtn = document.getElementById('modal-save-btn');
+        const projectNameInput = document.getElementById('project-name');
+        const projectCategorySelect = document.getElementById('project-category');
+        const projectDescInput = document.getElementById('project-description');
+        const projectStatusSelect = document.getElementById('project-status');
+        const projectProgressInput = document.getElementById('project-progress');
+        const projectIdInput = document.getElementById('project-id');
+        const modalCancel = document.getElementById('modal-cancel');
+        const modalSave = document.getElementById('modal-save');
+        const categoryFilter = document.getElementById('category-filter');
+        const statusFilter = document.getElementById('status-filter');
 
-        // DOM ready
+        // Initialize
         document.addEventListener('DOMContentLoaded', init);
 
         function init() {
-            renderAllTasks();
-            initDragAndDrop();
-            initEventListeners();
+            loadProjects();
+            renderProjects();
+            setupEventListeners();
         }
 
-        function initEventListeners() {
-            // Add task buttons
-            document.querySelectorAll('.add-task-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    modalTriggerButton = this;
-                    openModal(this.dataset.status);
+        function setupEventListeners() {
+            themeToggle.addEventListener('click', () => {
+                themeMenu.classList.toggle('active');
+            });
+
+            themeOptions.forEach(option => {
+                option.addEventListener('click', (e) => {
+                    const theme = e.target.dataset.theme;
+                    switchTheme(theme);
+                    document.querySelectorAll('.theme-option').forEach(o => o.classList.remove('active'));
+                    e.target.classList.add('active');
+                    themeMenu.classList.remove('active');
                 });
             });
 
-            // Modal buttons
-            modalCancelBtn.addEventListener('click', closeModal);
-            modalSaveBtn.addEventListener('click', saveTask);
+            addProjectBtn.addEventListener('click', openModal);
+            modalCancel.addEventListener('click', closeModal);
+            modalSave.addEventListener('click', saveProject);
+            categoryFilter.addEventListener('change', renderProjects);
+            statusFilter.addEventListener('change', renderProjects);
 
             // Close modal on overlay click
-            modalOverlay.addEventListener('click', function(e) {
-                if (e.target === modalOverlay) {
-                    closeModal();
-                }
-            });
-
-            // Keyboard shortcuts
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape' && modalOverlay.classList.contains('active')) {
-                    closeModal();
-                }
-                // Enter to save (but not in textarea)
-                if (e.key === 'Enter' && modalOverlay.classList.contains('active')) {
-                    if (document.activeElement !== taskDescInput) {
-                        e.preventDefault();
-                        saveTask();
-                    }
-                }
+            modalOverlay.addEventListener('click', (e) => {
+                if (e.target === modalOverlay) closeModal();
             });
         }
 
-        // Save to localStorage
-        function saveTasks() {
+        function switchTheme(theme) {
+            document.body.className = theme;
+            localStorage.setItem('tracker-theme', theme);
+        }
+
+        function loadProjects() {
+            const savedTheme = localStorage.getItem('tracker-theme');
+            if (savedTheme) {
+                document.body.className = savedTheme;
+                document.querySelector(`[data-theme="${savedTheme}"]`).classList.add('active');
+            }
+
             try {
-                localStorage.setItem('kanban-tasks', JSON.stringify(tasks));
+                projects = JSON.parse(localStorage.getItem('tracker-projects')) || [];
             } catch (e) {
-                console.error('Failed to save tasks:', e);
+                console.error('Failed to load projects:', e);
+                projects = [];
+            }
+
+            // Demo projects if empty
+            if (projects.length === 0) {
+                projects = [
+                    {
+                        id: 'proj-1',
+                        name: 'Website Redesign',
+                        category: 'frontend',
+                        description: 'Complete visual overhaul of the main website',
+                        status: 'inprogress',
+                        progress: 65,
+                        bugs: 3,
+                        features: 5,
+                        requirements: 2,
+                        createdAt: Date.now()
+                    },
+                    {
+                        id: 'proj-2',
+                        name: 'API v2 Migration',
+                        category: 'backend',
+                        description: 'Migrate from REST to GraphQL',
+                        status: 'planning',
+                        progress: 20,
+                        bugs: 1,
+                        features: 8,
+                        requirements: 3,
+                        createdAt: Date.now()
+                    },
+                    {
+                        id: 'proj-3',
+                        name: 'Docker Infrastructure',
+                        category: 'devops',
+                        description: 'Containerize all microservices',
+                        status: 'inprogress',
+                        progress: 45,
+                        bugs: 2,
+                        features: 3,
+                        requirements: 4,
+                        createdAt: Date.now()
+                    }
+                ];
+                saveProjects();
             }
         }
 
-        // Render all tasks
-        function renderAllTasks() {
-            const statuses = ['todo', 'in-progress', 'done'];
-            
-            statuses.forEach(status => {
-                const container = document.getElementById(`${status}-tasks`);
-                const countEl = document.getElementById(`${status}-count`);
-                const statusTasks = tasks.filter(t => t.status === status);
-                
-                // Sort by order property
-                statusTasks.sort((a, b) => (a.order || 0) - (b.order || 0));
-                
-                container.innerHTML = '';
-                countEl.textContent = statusTasks.length;
-                
-                if (statusTasks.length === 0) {
-                    const emptyState = document.createElement('div');
-                    emptyState.className = 'empty-state';
-                    emptyState.textContent = 'No tasks yet';
-                    container.appendChild(emptyState);
-                } else {
-                    statusTasks.forEach(task => {
-                        container.appendChild(createTaskElement(task));
-                    });
-                }
+        function saveProjects() {
+            localStorage.setItem('tracker-projects', JSON.stringify(projects));
+        }
+
+        function renderProjects() {
+            const categoryVal = categoryFilter.value;
+            const statusVal = statusFilter.value;
+
+            let filtered = projects;
+            if (categoryVal) {
+                filtered = filtered.filter(p => p.category === categoryVal);
+            }
+            if (statusVal) {
+                filtered = filtered.filter(p => p.status === statusVal);
+            }
+
+            projectsGrid.innerHTML = '';
+            filtered.forEach(project => {
+                projectsGrid.appendChild(createProjectCard(project));
             });
         }
 
-        // Create task DOM element (secure - no inline handlers)
-        function createTaskElement(task) {
+        function createProjectCard(project) {
+            const card = document.createElement('div');
+            card.className = `project-card cat-${project.category}`;
+            card.innerHTML = `
+                <div class="project-header">
+                    <div class="project-name">${escapeHtml(project.name)}</div>
+                    <div class="status-badge status-${project.status}">
+                        ${project.status === 'planning' ? 'Planning' : project.status === 'inprogress' ? 'In Progress' : 'Complete'}
+                    </div>
+                </div>
+                <div class="project-description">${escapeHtml(project.description)}</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${project.progress}%"></div>
+                </div>
+                <div class="project-stats">
+                    <div class="stat-item">
+                        <div class="stat-label">Bugs</div>
+                        <div class="stat-value">${project.bugs || 0}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Features</div>
+                        <div class="stat-value">${project.features || 0}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Reqs</div>
+                        <div class="stat-value">${project.requirements || 0}</div>
+                    </div>
+                </div>
+                <div class="project-actions">
+                    <button class="action-btn" onclick="window.editProject('${project.id}')">✏️ Edit</button>
+                    <button class="action-btn" onclick="window.deleteProject('${project.id}')">🗑️ Delete</button>
+                </div>
+            `;
+            return card;
+        }
+
+        function escapeHtml(text) {
             const div = document.createElement('div');
-            div.className = 'task';
-            div.draggable = true;
-            div.dataset.taskId = task.id;
-
-            // Title
-            const title = document.createElement('div');
-            title.className = 'task-title';
-            title.textContent = task.title;
-            div.appendChild(title);
-
-            // Description
-            if (task.description) {
-                const desc = document.createElement('div');
-                desc.className = 'task-desc';
-                desc.textContent = task.description;
-                div.appendChild(desc);
-            }
-
-            // Actions
-            const actions = document.createElement('div');
-            actions.className = 'task-actions';
-
-            const editBtn = document.createElement('button');
-            editBtn.textContent = '✏️ Edit';
-            editBtn.setAttribute('aria-label', `Edit task: ${task.title}`);
-            editBtn.addEventListener('click', function() {
-                modalTriggerButton = this;
-                editTask(task.id);
-            });
-
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'delete-btn';
-            deleteBtn.textContent = '🗑️ Delete';
-            deleteBtn.setAttribute('aria-label', `Delete task: ${task.title}`);
-            deleteBtn.addEventListener('click', function() {
-                deleteTask(task.id);
-            });
-
-            actions.appendChild(editBtn);
-            actions.appendChild(deleteBtn);
-            div.appendChild(actions);
-
-            // Drag events
-            div.addEventListener('dragstart', handleDragStart);
-            div.addEventListener('dragend', handleDragEnd);
-            div.addEventListener('dragover', handleTaskDragOver);
-            div.addEventListener('dragleave', handleTaskDragLeave);
-            div.addEventListener('drop', handleTaskDrop);
-
-            return div;
+            div.textContent = text;
+            return div.innerHTML;
         }
 
-        // Modal functions
-        function openModal(status, taskId) {
-            if (taskId) {
-                // Edit mode
-                const task = tasks.find(t => t.id === taskId);
-                if (task) {
-                    modalTitle.textContent = 'Edit Task';
-                    taskTitleInput.value = task.title;
-                    taskDescInput.value = task.description || '';
-                    taskIdInput.value = task.id;
-                    taskStatusInput.value = task.status;
-                }
-            } else {
-                // Add mode
-                modalTitle.textContent = 'Add Task';
-                taskTitleInput.value = '';
-                taskDescInput.value = '';
-                taskIdInput.value = '';
-                taskStatusInput.value = status;
-            }
-            
+        function openModal() {
+            editingId = null;
+            modalTitle.textContent = 'New Project';
+            projectNameInput.value = '';
+            projectDescInput.value = '';
+            projectStatusSelect.value = 'planning';
+            projectProgressInput.value = '0';
+            projectCategorySelect.value = 'frontend';
+            projectIdInput.value = '';
             modalOverlay.classList.add('active');
-            taskTitleInput.focus();
+            projectNameInput.focus();
         }
 
         function closeModal() {
             modalOverlay.classList.remove('active');
-            // Return focus to the button that opened the modal
-            if (modalTriggerButton) {
-                modalTriggerButton.focus();
-                modalTriggerButton = null;
-            }
         }
 
-        function saveTask() {
-            const title = taskTitleInput.value.trim();
-            if (!title) {
-                taskTitleInput.focus();
+        function saveProject() {
+            const name = projectNameInput.value.trim();
+            const desc = projectDescInput.value.trim();
+            const category = projectCategorySelect.value;
+            const status = projectStatusSelect.value;
+            const progress = parseInt(projectProgressInput.value) || 0;
+            const id = projectIdInput.value;
+
+            if (!name) {
+                projectNameInput.focus();
                 return;
             }
-            
-            const taskId = taskIdInput.value;
-            
-            if (taskId) {
-                // Update existing task
-                const task = tasks.find(t => t.id === taskId);
-                if (task) {
-                    task.title = title;
-                    task.description = taskDescInput.value.trim();
-                    task.updatedAt = Date.now();
+
+            if (id) {
+                // Edit existing
+                const project = projects.find(p => p.id === id);
+                if (project) {
+                    project.name = name;
+                    project.description = desc;
+                    project.category = category;
+                    project.status = status;
+                    project.progress = progress;
                 }
             } else {
-                // Create new task - add to end of column
-                const status = taskStatusInput.value;
-                const statusTasks = tasks.filter(t => t.status === status);
-                const maxOrder = statusTasks.reduce((max, t) => Math.max(max, t.order || 0), 0);
-                
-                const newTask = {
-                    id: generateId(),
-                    title: title,
-                    description: taskDescInput.value.trim(),
+                // New project
+                projects.push({
+                    id: 'proj-' + Date.now(),
+                    name: name,
+                    description: desc,
+                    category: category,
                     status: status,
-                    order: maxOrder + 1,
-                    createdAt: Date.now(),
-                    updatedAt: Date.now()
-                };
-                tasks.push(newTask);
+                    progress: progress,
+                    bugs: 0,
+                    features: 0,
+                    requirements: 0,
+                    createdAt: Date.now()
+                });
             }
-            
-            saveTasks();
-            renderAllTasks();
+
+            saveProjects();
+            renderProjects();
             closeModal();
         }
 
-        function editTask(taskId) {
-            const task = tasks.find(t => t.id === taskId);
-            if (task) {
-                openModal(task.status, taskId);
+        // Global functions for inline onclick
+        window.editProject = function(id) {
+            const project = projects.find(p => p.id === id);
+            if (project) {
+                editingId = id;
+                modalTitle.textContent = 'Edit Project';
+                projectNameInput.value = project.name;
+                projectDescInput.value = project.description;
+                projectCategorySelect.value = project.category;
+                projectStatusSelect.value = project.status;
+                projectProgressInput.value = project.progress;
+                projectIdInput.value = project.id;
+                modalOverlay.classList.add('active');
+                projectNameInput.focus();
             }
-        }
+        };
 
-        function deleteTask(taskId) {
-            if (confirm('Delete this task?')) {
-                tasks = tasks.filter(t => t.id !== taskId);
-                saveTasks();
-                renderAllTasks();
+        window.deleteProject = function(id) {
+            if (confirm('Delete this project?')) {
+                projects = projects.filter(p => p.id !== id);
+                saveProjects();
+                renderProjects();
             }
-        }
-
-        // Drag and Drop
-        function initDragAndDrop() {
-            const containers = document.querySelectorAll('.task-container');
-            
-            containers.forEach(container => {
-                container.addEventListener('dragover', handleContainerDragOver);
-                container.addEventListener('dragleave', handleContainerDragLeave);
-                container.addEventListener('drop', handleContainerDrop);
-            });
-        }
-
-        function handleDragStart(e) {
-            draggedTaskId = e.target.dataset.taskId;
-            e.target.classList.add('dragging');
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', draggedTaskId);
-        }
-
-        function handleDragEnd(e) {
-            e.target.classList.remove('dragging');
-            draggedTaskId = null;
-            dropTargetId = null;
-            dropPosition = null;
-            
-            // Remove all visual states
-            document.querySelectorAll('.task-container').forEach(c => {
-                c.classList.remove('dragover');
-            });
-            document.querySelectorAll('.task').forEach(t => {
-                t.classList.remove('drop-above', 'drop-below');
-            });
-        }
-
-        function handleContainerDragOver(e) {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-            // Only show dragover if container is empty or dragging over empty space
-            const tasks = e.currentTarget.querySelectorAll('.task:not(.dragging)');
-            if (tasks.length === 0) {
-                e.currentTarget.classList.add('dragover');
-            }
-        }
-
-        function handleContainerDragLeave(e) {
-            e.currentTarget.classList.remove('dragover');
-        }
-
-        function handleContainerDrop(e) {
-            e.preventDefault();
-            e.currentTarget.classList.remove('dragover');
-            
-            // Only handle if dropping on empty container (not on a task)
-            if (e.target.classList.contains('task-container') || e.target.classList.contains('empty-state')) {
-                const taskId = e.dataTransfer.getData('text/plain');
-                const newStatus = e.currentTarget.closest('.column').dataset.status;
-                
-                const task = tasks.find(t => t.id === taskId);
-                if (task) {
-                    task.status = newStatus;
-                    task.order = 0; // Will be first in empty column
-                    task.updatedAt = Date.now();
-                    saveTasks();
-                    renderAllTasks();
-                }
-            }
-        }
-
-        function handleTaskDragOver(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            if (e.currentTarget.dataset.taskId === draggedTaskId) return;
-            
-            // Determine if dropping above or below based on mouse position
-            const rect = e.currentTarget.getBoundingClientRect();
-            const midpoint = rect.top + rect.height / 2;
-            
-            e.currentTarget.classList.remove('drop-above', 'drop-below');
-            
-            if (e.clientY < midpoint) {
-                e.currentTarget.classList.add('drop-above');
-                dropPosition = 'above';
-            } else {
-                e.currentTarget.classList.add('drop-below');
-                dropPosition = 'below';
-            }
-            
-            dropTargetId = e.currentTarget.dataset.taskId;
-        }
-
-        function handleTaskDragLeave(e) {
-            e.currentTarget.classList.remove('drop-above', 'drop-below');
-        }
-
-        function handleTaskDrop(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const draggedId = e.dataTransfer.getData('text/plain');
-            const targetId = e.currentTarget.dataset.taskId;
-            
-            if (draggedId === targetId) return;
-            
-            const draggedTask = tasks.find(t => t.id === draggedId);
-            const targetTask = tasks.find(t => t.id === targetId);
-            
-            if (!draggedTask || !targetTask) return;
-            
-            // Update status
-            const newStatus = e.currentTarget.closest('.column').dataset.status;
-            draggedTask.status = newStatus;
-            draggedTask.updatedAt = Date.now();
-            
-            // Reorder within the column
-            const columnTasks = tasks.filter(t => t.status === newStatus && t.id !== draggedId);
-            columnTasks.sort((a, b) => (a.order || 0) - (b.order || 0));
-            
-            // Find target index
-            let targetIndex = columnTasks.findIndex(t => t.id === targetId);
-            if (dropPosition === 'below') {
-                targetIndex++;
-            }
-            
-            // Insert at target position
-            columnTasks.splice(targetIndex, 0, draggedTask);
-            
-            // Reassign order values
-            columnTasks.forEach((t, i) => {
-                t.order = i;
-            });
-            
-            // Clean up visual states
-            e.currentTarget.classList.remove('drop-above', 'drop-below');
-            
-            saveTasks();
-            renderAllTasks();
-        }
+        };
 
     })();
     </script>
