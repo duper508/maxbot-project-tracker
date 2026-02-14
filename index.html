@@ -302,10 +302,30 @@
         /* Responsive */
         @media (max-width: 768px) {
             .board {
+                flex-direction: column;
                 padding: 15px;
+                gap: 15px;
             }
             .column {
-                min-width: 280px;
+                min-width: 100%;
+                max-width: 100%;
+            }
+            .task-container {
+                max-height: 300px;
+                overflow-y: auto;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 1.4rem;
+            }
+            .column {
+                min-width: 100%;
+            }
+            .task {
+                font-size: 0.9rem;
+                padding: 10px;
             }
         }
     </style>
