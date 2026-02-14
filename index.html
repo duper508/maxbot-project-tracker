@@ -104,9 +104,10 @@
         }
 
         .theme-light .theme-btn {
-            border-color: rgba(0, 0, 0, 0.2);
-            background: rgba(0, 0, 0, 0.05);
+            border-color: rgba(0, 0, 0, 0.15);
+            background: #fff;
             color: #333;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
         }
 
         .theme-btn:hover {
@@ -196,9 +197,10 @@
 
         .theme-light .filter-bar select,
         .theme-light .filter-bar button {
-            border-color: rgba(0, 0, 0, 0.2);
-            background: rgba(0, 0, 0, 0.05);
+            border-color: rgba(0, 0, 0, 0.15);
+            background: #fff;
             color: #333;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
         }
 
         .projects-grid {
@@ -362,6 +364,11 @@
             font-size: 0.75rem;
         }
 
+        .theme-sofi-dark .stat-label {
+            color: #b0b0b0;
+            opacity: 1;
+        }
+
         .stat-value {
             font-weight: 600;
             font-size: 1.1rem;
@@ -468,6 +475,10 @@
             align-items: center;
         }
 
+        .theme-sofi-dark .modal-overlay {
+            background: rgba(0, 0, 0, 0.9);
+        }
+
         .modal-overlay.active {
             display: flex;
         }
@@ -517,6 +528,10 @@
             margin-bottom: 5px;
             font-size: 0.9rem;
             font-weight: 500;
+        }
+
+        .theme-sofi-dark .form-group label {
+            color: #e0e0e0;
         }
 
         .form-group input,
@@ -653,6 +668,17 @@
 
             .header h1 {
                 font-size: 1.4rem;
+            }
+
+            .header-controls {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .theme-menu {
+                right: auto;
+                left: 50%;
+                transform: translateX(-50%);
             }
         }
     </style>
