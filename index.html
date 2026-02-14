@@ -89,52 +89,54 @@
         }
 
         .theme-switcher {
-            position: relative;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 999;
         }
 
         .theme-btn {
-            padding: 8px 16px;
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 14px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.08);
             color: #fff;
             cursor: pointer;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             transition: all 0.2s;
         }
 
         .theme-light .theme-btn {
-            border-color: rgba(0, 0, 0, 0.15);
-            background: #fff;
+            border-color: rgba(0, 0, 0, 0.12);
+            background: rgba(0, 0, 0, 0.04);
             color: #333;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
         }
 
         .theme-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.12);
         }
 
         .theme-light .theme-btn:hover {
-            background: rgba(0, 0, 0, 0.1);
+            background: rgba(0, 0, 0, 0.08);
         }
 
         .theme-menu {
             display: none;
-            position: absolute;
-            top: 100%;
-            right: 0;
+            position: fixed;
+            top: 60px;
+            right: 20px;
             background: #1a1a2e;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
-            margin-top: 8px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-            z-index: 1000;
-            min-width: 180px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 6px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            z-index: 998;
+            min-width: 160px;
         }
 
         .theme-light .theme-menu {
             background: #fff;
-            border-color: rgba(0, 0, 0, 0.1);
+            border-color: rgba(0, 0, 0, 0.08);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
         }
 
         .theme-menu.active {
@@ -142,16 +144,16 @@
         }
 
         .theme-option {
-            padding: 12px 16px;
+            padding: 10px 14px;
             cursor: pointer;
             transition: background 0.2s;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             color: #fff;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
 
         .theme-light .theme-option {
-            border-bottom-color: rgba(0, 0, 0, 0.1);
+            border-bottom-color: rgba(0, 0, 0, 0.08);
             color: #333;
         }
 
@@ -160,16 +162,22 @@
         }
 
         .theme-option:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.08);
         }
 
         .theme-light .theme-option:hover {
-            background: rgba(0, 0, 0, 0.05);
+            background: rgba(0, 0, 0, 0.04);
         }
 
         .theme-option.active {
-            background: rgba(59, 130, 246, 0.3);
-            font-weight: 600;
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+            font-weight: 500;
+        }
+
+        .theme-light .theme-option.active {
+            background: rgba(59, 130, 246, 0.1);
+            color: #2563eb;
         }
 
         .container {
@@ -685,20 +693,21 @@
 </head>
 <body class="theme-dark-blue">
     <div class="header">
-        <h1>📊 Project Tracker</h1>
+        <h1>Project Tracker</h1>
         <div class="header-controls">
-            <div class="theme-switcher">
-                <button class="theme-btn" id="theme-toggle">🎨 Theme</button>
-                <div class="theme-menu" id="theme-menu">
-                    <div class="theme-option active" data-theme="theme-dark-blue">🌙 Dark Blue</div>
-                    <div class="theme-option" data-theme="theme-light">☀️ Light Minimal</div>
-                    <div class="theme-option" data-theme="theme-dark-colorful">🎨 Dark Colorful</div>
-                    <div class="theme-option" data-theme="theme-glass">✨ Glassmorphism</div>
-                    <div class="theme-option" data-theme="theme-sofi">💎 SoFi Fintech</div>
-                    <div class="theme-option" data-theme="theme-sofi-dark">🌀 SoFi Dark</div>
-                </div>
-            </div>
-            <button id="add-project-btn" class="theme-btn">+ New Project</button>
+            <button id="add-project-btn" class="theme-btn">New Project</button>
+        </div>
+    </div>
+
+    <div class="theme-switcher">
+        <button class="theme-btn" id="theme-toggle">Theme</button>
+        <div class="theme-menu" id="theme-menu">
+            <div class="theme-option active" data-theme="theme-dark-blue">Dark Blue</div>
+            <div class="theme-option" data-theme="theme-light">Light</div>
+            <div class="theme-option" data-theme="theme-dark-colorful">Dark Colorful</div>
+            <div class="theme-option" data-theme="theme-glass">Glassmorphism</div>
+            <div class="theme-option" data-theme="theme-sofi">SoFi</div>
+            <div class="theme-option" data-theme="theme-sofi-dark">SoFi Dark</div>
         </div>
     </div>
 
@@ -940,8 +949,8 @@
                     </div>
                 </div>
                 <div class="project-actions">
-                    <button class="action-btn" onclick="window.editProject('${project.id}')">✏️ Edit</button>
-                    <button class="action-btn" onclick="window.deleteProject('${project.id}')">🗑️ Delete</button>
+                    <button class="action-btn" onclick="window.editProject('${project.id}')">Edit</button>
+                    <button class="action-btn" onclick="window.deleteProject('${project.id}')">Delete</button>
                 </div>
             `;
             return card;
