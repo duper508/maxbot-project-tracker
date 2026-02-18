@@ -41,6 +41,18 @@
             color: #fff;
         }
 
+        /* ===== THEME: SOFI FINTECH ===== */
+        body.theme-sofi {
+            background: #f8fafb;
+            color: #1a1f2e;
+        }
+
+        /* ===== THEME: SOFI DARK ===== */
+        body.theme-sofi-dark {
+            background: #000000;
+            color: #fff;
+        }
+
         .header {
             padding: 20px 30px;
             display: flex;
@@ -55,6 +67,16 @@
             border-bottom-color: rgba(0, 0, 0, 0.1);
         }
 
+        .theme-sofi .header {
+            background: #fff;
+            border-bottom-color: rgba(0, 162, 199, 0.1);
+        }
+
+        .theme-sofi-dark .header {
+            background: #0a0a0a;
+            border-bottom-color: rgba(0, 162, 199, 0.3);
+        }
+
         .header h1 {
             font-size: 1.8rem;
             font-weight: 600;
@@ -67,51 +89,54 @@
         }
 
         .theme-switcher {
-            position: relative;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 999;
         }
 
         .theme-btn {
-            padding: 8px 16px;
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 14px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.08);
             color: #fff;
             cursor: pointer;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             transition: all 0.2s;
         }
 
         .theme-light .theme-btn {
-            border-color: rgba(0, 0, 0, 0.2);
-            background: rgba(0, 0, 0, 0.05);
+            border-color: rgba(0, 0, 0, 0.12);
+            background: rgba(0, 0, 0, 0.04);
             color: #333;
         }
 
         .theme-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.12);
         }
 
         .theme-light .theme-btn:hover {
-            background: rgba(0, 0, 0, 0.1);
+            background: rgba(0, 0, 0, 0.08);
         }
 
         .theme-menu {
             display: none;
-            position: absolute;
-            top: 100%;
-            right: 0;
+            position: fixed;
+            top: 60px;
+            right: 20px;
             background: #1a1a2e;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
-            margin-top: 8px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-            z-index: 1000;
-            min-width: 180px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 6px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            z-index: 998;
+            min-width: 160px;
         }
 
         .theme-light .theme-menu {
             background: #fff;
-            border-color: rgba(0, 0, 0, 0.1);
+            border-color: rgba(0, 0, 0, 0.08);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
         }
 
         .theme-menu.active {
@@ -119,16 +144,16 @@
         }
 
         .theme-option {
-            padding: 12px 16px;
+            padding: 10px 14px;
             cursor: pointer;
             transition: background 0.2s;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             color: #fff;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
 
         .theme-light .theme-option {
-            border-bottom-color: rgba(0, 0, 0, 0.1);
+            border-bottom-color: rgba(0, 0, 0, 0.08);
             color: #333;
         }
 
@@ -137,16 +162,22 @@
         }
 
         .theme-option:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.08);
         }
 
         .theme-light .theme-option:hover {
-            background: rgba(0, 0, 0, 0.05);
+            background: rgba(0, 0, 0, 0.04);
         }
 
         .theme-option.active {
-            background: rgba(59, 130, 246, 0.3);
-            font-weight: 600;
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+            font-weight: 500;
+        }
+
+        .theme-light .theme-option.active {
+            background: rgba(59, 130, 246, 0.1);
+            color: #2563eb;
         }
 
         .container {
@@ -174,9 +205,10 @@
 
         .theme-light .filter-bar select,
         .theme-light .filter-bar button {
-            border-color: rgba(0, 0, 0, 0.2);
-            background: rgba(0, 0, 0, 0.05);
+            border-color: rgba(0, 0, 0, 0.15);
+            background: #fff;
             color: #333;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
         }
 
         .projects-grid {
@@ -218,6 +250,22 @@
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
         }
 
+        /* ===== PROJECT CARD - SOFI ===== */
+        .theme-sofi .project-card {
+            background: #fff;
+            border: 1px solid #e5e8eb;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            border-top: 3px solid #00a2c7;
+        }
+
+        /* ===== PROJECT CARD - SOFI DARK ===== */
+        .theme-sofi-dark .project-card {
+            background: #1a1a1a;
+            border: 1px solid rgba(0, 162, 199, 0.4);
+            box-shadow: 0 4px 12px rgba(0, 162, 199, 0.1);
+            border-top: 3px solid #00a2c7;
+        }
+
         .project-card {
             border-radius: 12px;
             padding: 20px;
@@ -242,6 +290,17 @@
             background: rgba(255, 255, 255, 0.12);
         }
 
+        .theme-sofi .project-card:hover {
+            box-shadow: 0 8px 16px rgba(0, 162, 199, 0.12);
+            border-top-color: #0088ab;
+        }
+
+        .theme-sofi-dark .project-card:hover {
+            background: #252525;
+            box-shadow: 0 8px 20px rgba(0, 162, 199, 0.15);
+            border-top-color: #00d4f0;
+        }
+
         .project-header {
             display: flex;
             justify-content: space-between;
@@ -264,6 +323,14 @@
         .status-planning { background: rgba(249, 115, 22, 0.3); color: #f97316; }
         .status-inprogress { background: rgba(59, 130, 246, 0.3); color: #3b82f6; }
         .status-complete { background: rgba(16, 185, 129, 0.3); color: #10b981; }
+
+        .theme-sofi .status-planning { background: rgba(255, 159, 64, 0.15); color: #ff9f40; }
+        .theme-sofi .status-inprogress { background: rgba(0, 162, 199, 0.15); color: #00a2c7; }
+        .theme-sofi .status-complete { background: rgba(0, 184, 92, 0.15); color: #00b85c; }
+
+        .theme-sofi-dark .status-planning { background: rgba(255, 159, 64, 0.2); color: #ffb366; }
+        .theme-sofi-dark .status-inprogress { background: rgba(0, 162, 199, 0.2); color: #00d4f0; }
+        .theme-sofi-dark .status-complete { background: rgba(0, 184, 92, 0.2); color: #2ecc71; }
 
         .project-description {
             font-size: 0.9rem;
@@ -291,9 +358,23 @@
             background: rgba(0, 0, 0, 0.05);
         }
 
+        .theme-sofi .stat-item {
+            background: #f0f6f8;
+        }
+
+        .theme-sofi-dark .stat-item {
+            background: rgba(0, 162, 199, 0.08);
+            border: 1px solid rgba(0, 162, 199, 0.3);
+        }
+
         .stat-label {
             opacity: 0.7;
             font-size: 0.75rem;
+        }
+
+        .theme-sofi-dark .stat-label {
+            color: #b0b0b0;
+            opacity: 1;
         }
 
         .stat-value {
@@ -313,10 +394,26 @@
             background: rgba(0, 0, 0, 0.1);
         }
 
+        .theme-sofi .progress-bar {
+            background: #e5e8eb;
+        }
+
+        .theme-sofi-dark .progress-bar {
+            background: rgba(0, 162, 199, 0.12);
+        }
+
         .progress-fill {
             height: 100%;
             background: linear-gradient(90deg, #3b82f6, #8b5cf6);
             transition: width 0.3s ease;
+        }
+
+        .theme-sofi .progress-fill {
+            background: linear-gradient(90deg, #00a2c7, #00b85c);
+        }
+
+        .theme-sofi-dark .progress-fill {
+            background: linear-gradient(90deg, #00d4f0, #2ecc71);
         }
 
         .project-actions {
@@ -341,12 +438,34 @@
             color: #333;
         }
 
+        .theme-sofi .action-btn {
+            background: #f0f6f8;
+            color: #00a2c7;
+            border: 1px solid #d4e8ed;
+        }
+
+        .theme-sofi-dark .action-btn {
+            background: #0a0a0a;
+            color: #00d4f0;
+            border: 1px solid rgba(0, 162, 199, 0.4);
+        }
+
         .action-btn:hover {
             background: rgba(255, 255, 255, 0.2);
         }
 
         .theme-light .action-btn:hover {
             background: rgba(0, 0, 0, 0.15);
+        }
+
+        .theme-sofi .action-btn:hover {
+            background: #e5f3f7;
+            border-color: #00a2c7;
+        }
+
+        .theme-sofi-dark .action-btn:hover {
+            background: #1a1a1a;
+            border-color: #00d4f0;
         }
 
         /* Modal */
@@ -362,6 +481,10 @@
             z-index: 2000;
             justify-content: center;
             align-items: center;
+        }
+
+        .theme-sofi-dark .modal-overlay {
+            background: rgba(0, 0, 0, 0.9);
         }
 
         .modal-overlay.active {
@@ -385,6 +508,20 @@
             color: #333;
         }
 
+        .theme-sofi .modal {
+            background: #fff;
+            border-color: #e5e8eb;
+            color: #1a1f2e;
+            border: 1px solid #e5e8eb;
+        }
+
+        .theme-sofi-dark .modal {
+            background: #0a0a0a;
+            border-color: rgba(0, 162, 199, 0.4);
+            color: #fff;
+            border: 1px solid rgba(0, 162, 199, 0.4);
+        }
+
         .modal h3 {
             margin-bottom: 20px;
             font-size: 1.3rem;
@@ -399,6 +536,10 @@
             margin-bottom: 5px;
             font-size: 0.9rem;
             font-weight: 500;
+        }
+
+        .theme-sofi-dark .form-group label {
+            color: #e0e0e0;
         }
 
         .form-group input,
@@ -420,6 +561,38 @@
             border-color: rgba(0, 0, 0, 0.2);
             background: rgba(0, 0, 0, 0.05);
             color: #333;
+        }
+
+        .theme-sofi .form-group input,
+        .theme-sofi .form-group select,
+        .theme-sofi .form-group textarea {
+            border-color: #e5e8eb;
+            background: #f8fafb;
+            color: #1a1f2e;
+        }
+
+        .theme-sofi .form-group input:focus,
+        .theme-sofi .form-group select:focus,
+        .theme-sofi .form-group textarea:focus {
+            border-color: #00a2c7;
+            background: #fff;
+            outline: none;
+        }
+
+        .theme-sofi-dark .form-group input,
+        .theme-sofi-dark .form-group select,
+        .theme-sofi-dark .form-group textarea {
+            border-color: rgba(0, 162, 199, 0.4);
+            background: #1a1a1a;
+            color: #fff;
+        }
+
+        .theme-sofi-dark .form-group input:focus,
+        .theme-sofi-dark .form-group select:focus,
+        .theme-sofi-dark .form-group textarea:focus {
+            border-color: #00d4f0;
+            background: #252525;
+            outline: none;
         }
 
         .form-group textarea {
@@ -462,6 +635,33 @@
             background: #2563eb;
         }
 
+        .theme-sofi .btn-save {
+            background: #00a2c7;
+            color: #fff;
+        }
+
+        .theme-sofi .btn-save:hover {
+            background: #0088ab;
+        }
+
+        .theme-sofi-dark .btn-save {
+            background: #00a2c7;
+            color: #fff;
+        }
+
+        .theme-sofi-dark .btn-save:hover {
+            background: #00d4f0;
+        }
+
+        .theme-sofi-dark .btn-cancel {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        .theme-sofi-dark .btn-cancel:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .projects-grid {
@@ -477,23 +677,37 @@
             .header h1 {
                 font-size: 1.4rem;
             }
+
+            .header-controls {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .theme-menu {
+                right: auto;
+                left: 50%;
+                transform: translateX(-50%);
+            }
         }
     </style>
 </head>
 <body class="theme-dark-blue">
     <div class="header">
-        <h1>📊 Project Tracker</h1>
+        <h1>Project Tracker</h1>
         <div class="header-controls">
-            <div class="theme-switcher">
-                <button class="theme-btn" id="theme-toggle">🎨 Theme</button>
-                <div class="theme-menu" id="theme-menu">
-                    <div class="theme-option active" data-theme="theme-dark-blue">🌙 Dark Blue</div>
-                    <div class="theme-option" data-theme="theme-light">☀️ Light Minimal</div>
-                    <div class="theme-option" data-theme="theme-dark-colorful">🎨 Dark Colorful</div>
-                    <div class="theme-option" data-theme="theme-glass">✨ Glassmorphism</div>
-                </div>
-            </div>
-            <button id="add-project-btn" class="theme-btn">+ New Project</button>
+            <button id="add-project-btn" class="theme-btn">New Project</button>
+        </div>
+    </div>
+
+    <div class="theme-switcher">
+        <button class="theme-btn" id="theme-toggle">Theme</button>
+        <div class="theme-menu" id="theme-menu">
+            <div class="theme-option active" data-theme="theme-dark-blue">Dark Blue</div>
+            <div class="theme-option" data-theme="theme-light">Light</div>
+            <div class="theme-option" data-theme="theme-dark-colorful">Dark Colorful</div>
+            <div class="theme-option" data-theme="theme-glass">Glassmorphism</div>
+            <div class="theme-option" data-theme="theme-sofi">SoFi</div>
+            <div class="theme-option" data-theme="theme-sofi-dark">SoFi Dark</div>
         </div>
     </div>
 
@@ -735,8 +949,8 @@
                     </div>
                 </div>
                 <div class="project-actions">
-                    <button class="action-btn" onclick="window.editProject('${project.id}')">✏️ Edit</button>
-                    <button class="action-btn" onclick="window.deleteProject('${project.id}')">🗑️ Delete</button>
+                    <button class="action-btn" onclick="window.editProject('${project.id}')">Edit</button>
+                    <button class="action-btn" onclick="window.deleteProject('${project.id}')">Delete</button>
                 </div>
             `;
             return card;
