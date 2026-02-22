@@ -29,6 +29,20 @@ class User < ApplicationRecord
     ENV["GITHUB_CLIENT_ID"].present? && ENV["GITHUB_CLIENT_SECRET"].present?
   end
 
+  # Check whether a GitHub OAuth identity is allowed to sign in.
+  # If both allowlists are empty, all GitHub users are allowed.
+  def self.github_oauth_allowed?(auth)
+    allowed_logins = parse_env_csv("ALLOWED_GITHUB_LOGINS")
+    allowed_emails = parse_env_csv("ALLOWED_GITHUB_EMAILS")
+
+    return true if allowed_logins.empty? && allowed_emails.empty?
+
+    login = auth&.dig("info", "nickname").to_s.downcase
+    email = auth&.dig("info", "email").to_s.downcase
+
+    allowed_logins.include?(login) || allowed_emails.include?(email)
+  end
+
   # Find or create a user from GitHub OAuth data
   def self.find_or_create_from_github(auth)
     email = auth.info.email
@@ -83,6 +97,13 @@ class User < ApplicationRecord
   end
 
   private
+
+  def self.parse_env_csv(name)
+    ENV.fetch(name, "")
+      .split(",")
+      .map { |value| value.strip.downcase }
+      .reject(&:blank?)
+  end
 
   def password_required?
     # Password is required for new non-OAuth users or when password is being set
