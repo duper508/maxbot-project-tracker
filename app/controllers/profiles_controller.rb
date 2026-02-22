@@ -1,7 +1,7 @@
 class ProfilesController < ApplicationController
   def show
     @user = current_user
-    @api_token = current_user.api_token
+    @agents = current_user.agents.includes(:api_token).order(:created_at)
   end
 
   def update
@@ -15,14 +15,9 @@ class ProfilesController < ApplicationController
     if @user.update(profile_params)
       redirect_to settings_path, notice: "Profile updated successfully."
     else
+      @agents = current_user.agents.includes(:api_token).order(:created_at)
       render :show, status: :unprocessable_entity
     end
-  end
-
-  def regenerate_api_token
-    current_user.api_tokens.destroy_all
-    @api_token = current_user.api_tokens.create!
-    redirect_to settings_path, notice: "API token regenerated."
   end
 
   private

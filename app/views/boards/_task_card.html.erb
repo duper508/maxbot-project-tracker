@@ -15,25 +15,37 @@
     <button data-dropdown-target="button" class="hidden" aria-expanded="false"></button>
     <div data-dropdown-target="menu" class="hidden fixed z-[100] min-w-[160px] bg-bg-elevated border border-border rounded-lg shadow-lg py-1">
       <%# Agent Assignment %>
-      <% agent_connected = current_user.agent_last_active_at.present? %>
-      <% if agent_connected %>
-        <% agent_emoji = current_user.agent_emoji || "🦞" %>
-        <% agent_name = current_user.agent_name || "Agent" %>
+      <% user_agents = current_user.agents.order(:created_at) %>
+      <% if user_agents.any? %>
         <% if task.assigned_to_agent? %>
+          <% assigned_agent = task.agent %>
           <%= button_to unassign_board_task_path(task.board, task),
               method: :patch,
               data: { action: "click->dropdown#close" },
               class: "w-full flex items-center gap-2 px-3 py-2 text-sm text-content-secondary hover:bg-bg-hover transition-colors" do %>
-            <span class="w-4 text-center"><%= agent_emoji %></span>
-            Unassign from <%= agent_name %>
+            <span class="w-4 text-center"><%= assigned_agent&.emoji || "🦞" %></span>
+            Unassign from <%= assigned_agent&.name || "Agent" %>
+          <% end %>
+        <% elsif user_agents.size > 1 %>
+          <% user_agents.each do |agent| %>
+            <%= button_to assign_board_task_path(task.board, task),
+                method: :patch,
+                params: { agent_id: agent.id },
+                data: { action: "click->dropdown#close" },
+                class: "w-full flex items-center gap-2 px-3 py-2 text-sm text-content-secondary hover:bg-bg-hover transition-colors" do %>
+              <span class="w-4 text-center"><%= agent.emoji %></span>
+              Assign to <%= agent.name %>
+            <% end %>
           <% end %>
         <% else %>
+          <% agent = user_agents.first %>
           <%= button_to assign_board_task_path(task.board, task),
               method: :patch,
+              params: { agent_id: agent.id },
               data: { action: "click->dropdown#close" },
               class: "w-full flex items-center gap-2 px-3 py-2 text-sm text-content-secondary hover:bg-bg-hover transition-colors" do %>
-            <span class="w-4 text-center"><%= agent_emoji %></span>
-            Assign to <%= agent_name %>
+            <span class="w-4 text-center"><%= agent.emoji %></span>
+            Assign to <%= agent.name %>
           <% end %>
         <% end %>
         <div class="border-t border-border my-1"></div>
@@ -163,7 +175,7 @@
 
     <%# Agent Assignment Badge %>
     <% if task.assigned_to_agent? %>
-      <span class="text-xs" title="Assigned to <%= task.user.agent_name || 'Agent' %>"><%= task.user.agent_emoji || "🦞" %></span>
+      <span class="text-xs" title="Assigned to <%= task.agent&.name || 'Agent' %>"><%= task.agent&.emoji || "🦞" %></span>
     <% end %>
   </div>
   <% end %>

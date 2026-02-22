@@ -4,21 +4,29 @@ module Api
 
     included do
       before_action :authenticate_api_token
-      attr_reader :current_user
+      attr_reader :current_user, :current_agent
     end
 
     private
 
     def authenticate_api_token
       token = extract_token_from_header
-      @current_user = ApiToken.authenticate(token)
+      api_token = ApiToken.authenticate_token(token)
 
-      unless @current_user
+      unless api_token
         render json: { error: "Unauthorized" }, status: :unauthorized
         return
       end
 
-      update_agent_info_from_headers
+      @current_user = api_token.user
+      @current_agent = api_token.agent
+
+      if @current_agent
+        update_agent_info
+      else
+        # Legacy token without agent - try to find/create agent from headers
+        legacy_agent_fallback(api_token)
+      end
     end
 
     def extract_token_from_header
@@ -30,15 +38,37 @@ module Api
       match&.[](1)
     end
 
-    def update_agent_info_from_headers
+    def update_agent_info
+      updates = { last_active_at: Time.current }
       agent_name = request.headers["X-Agent-Name"]
       agent_emoji = request.headers["X-Agent-Emoji"]
+      updates[:name] = agent_name if agent_name.present? && agent_name != @current_agent.name
+      updates[:emoji] = agent_emoji if agent_emoji.present? && agent_emoji != @current_agent.emoji
+      @current_agent.update_columns(updates)
+    end
 
-      updates = { agent_last_active_at: Time.current }
-      updates[:agent_name] = agent_name if agent_name.present?
-      updates[:agent_emoji] = agent_emoji if agent_emoji.present?
+    def legacy_agent_fallback(api_token)
+      agent_name = request.headers["X-Agent-Name"].presence || "OpenClaw"
 
-      current_user.update_columns(updates)
+      # Find or create agent for this legacy token
+      @current_agent = @current_user.agents.find_by(name: agent_name)
+      unless @current_agent
+        @current_agent = @current_user.agents.create!(
+          name: agent_name,
+          emoji: request.headers["X-Agent-Emoji"].presence || "🦞"
+        )
+      end
+
+      # Link the token to the agent
+      api_token.update_columns(agent_id: @current_agent.id)
+      @current_agent.update_columns(last_active_at: Time.current)
+
+      # Also update user columns for backward compat
+      user_updates = { agent_last_active_at: Time.current }
+      user_updates[:agent_name] = agent_name if agent_name.present?
+      agent_emoji = request.headers["X-Agent-Emoji"]
+      user_updates[:agent_emoji] = agent_emoji if agent_emoji.present?
+      current_user.update_columns(user_updates)
     end
   end
 end

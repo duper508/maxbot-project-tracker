@@ -5,16 +5,16 @@ module Api
 
       # GET /api/v1/tasks/next - get next task for agent to work on
       # Returns highest priority unclaimed task in "up_next" status
-      # Returns 204 No Content if no tasks available or user has auto_mode disabled
+      # Returns 204 No Content if no tasks available or agent has auto_mode disabled
       def next
-        # Check if user has agent auto mode enabled
-        unless current_user.agent_auto_mode?
+        unless current_agent&.auto_mode?
           head :no_content
           return
         end
 
         @task = current_user.tasks
           .where(status: :up_next, blocked: false, agent_claimed_at: nil)
+          .where(agent_id: [nil, current_agent.id])
           .reorder(priority: :desc, position: :asc)
           .first
 
@@ -28,14 +28,14 @@ module Api
       # GET /api/v1/tasks/pending_attention - tasks needing agent attention
       # Returns tasks that are in "in_progress" and were claimed by agent
       def pending_attention
-        unless current_user.agent_auto_mode?
+        unless current_agent&.auto_mode?
           render json: []
           return
         end
 
-        # Tasks in progress that agent claimed
+        # Tasks in progress that this agent claimed
         @tasks = current_user.tasks
-          .where(status: :in_progress)
+          .where(status: :in_progress, agent_id: current_agent.id)
           .where.not(agent_claimed_at: nil)
 
         render json: @tasks.map { |task| task_json(task) }
@@ -44,7 +44,7 @@ module Api
       # PATCH /api/v1/tasks/:id/claim - agent claims a task
       def claim
         set_task_activity_info(@task)
-        @task.update!(agent_claimed_at: Time.current, status: :in_progress)
+        @task.update!(agent_claimed_at: Time.current, agent_id: current_agent&.id, status: :in_progress)
         render json: task_json(@task)
       end
 
@@ -58,14 +58,25 @@ module Api
       # PATCH /api/v1/tasks/:id/assign - assign task to agent
       def assign
         set_task_activity_info(@task)
-        @task.update!(assigned_to_agent: true, assigned_at: Time.current)
+        agent = if params[:agent_id].present?
+          current_user.agents.find(params[:agent_id])
+        else
+          current_agent
+        end
+
+        unless agent
+          render json: { error: "No agent specified. Provide agent_id or authenticate with an agent token." }, status: :unprocessable_entity
+          return
+        end
+
+        @task.assign_to_agent!(agent)
         render json: task_json(@task)
       end
 
       # PATCH /api/v1/tasks/:id/unassign - unassign task from agent
       def unassign
         set_task_activity_info(@task)
-        @task.update!(assigned_to_agent: false, assigned_at: nil)
+        @task.unassign_from_agent!
         render json: task_json(@task)
       end
 
@@ -104,7 +115,11 @@ module Api
         # Filter by agent assignment
         if params[:assigned].present?
           assigned = ActiveModel::Type::Boolean.new.cast(params[:assigned])
-          @tasks = @tasks.where(assigned_to_agent: assigned)
+          if assigned && current_agent
+            @tasks = @tasks.where(agent_id: current_agent.id)
+          else
+            @tasks = @tasks.where(assigned_to_agent: assigned)
+          end
         end
 
         # Order by assigned_at for assigned tasks, otherwise by status then position
@@ -176,8 +191,14 @@ module Api
 
       def set_task_activity_info(task)
         task.activity_source = "api"
-        task.actor_name = request.headers["X-Agent-Name"]
-        task.actor_emoji = request.headers["X-Agent-Emoji"]
+        task.activity_agent = current_agent
+        if current_agent
+          task.actor_name = current_agent.name
+          task.actor_emoji = current_agent.emoji
+        else
+          task.actor_name = request.headers["X-Agent-Name"]
+          task.actor_emoji = request.headers["X-Agent-Emoji"]
+        end
         task.activity_note = params[:activity_note] || params.dig(:task, :activity_note)
       end
 
@@ -186,7 +207,7 @@ module Api
       end
 
       def task_json(task)
-        {
+        json = {
           id: task.id,
           name: task.name,
           description: task.description,
@@ -206,6 +227,12 @@ module Api
           created_at: task.created_at.iso8601,
           updated_at: task.updated_at.iso8601
         }
+        if task.agent
+          json[:agent_id] = task.agent_id
+          json[:agent_name] = task.agent.name
+          json[:agent_emoji] = task.agent.emoji
+        end
+        json
       end
     end
   end

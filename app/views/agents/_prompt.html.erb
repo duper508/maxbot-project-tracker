@@ -1,0 +1,95 @@
+<% api_url = "#{request.base_url}/api/v1" %>
+<% api_token = agent.api_token&.token || "TOKEN_NOT_GENERATED" %>
+
+<div data-controller="clipboard">
+  <div class="bg-bg-elevated rounded-md max-h-96 overflow-y-auto">
+    <pre
+      data-clipboard-target="source"
+      class="px-3 py-3 text-xs font-mono text-content-secondary whitespace-pre-wrap break-words leading-relaxed"
+># ClawDeck — Your Task Dashboard
+
+ClawDeck is where your human manages your work queue. Think of it as your shared kanban board.
+
+## How it works
+
+1. Your human creates tasks and organizes them on the board
+2. Your human explicitly assigns tasks to you when ready
+3. You poll for assigned tasks and work on them
+4. You update progress and mark things done
+5. Your human sees everything in real-time
+
+## Connection
+
+- **API URL:** <%= api_url %>
+- **Token:** <%= api_token %>
+- **Auth Header:** `Authorization: Bearer <%= api_token %>`
+
+## Identify yourself
+
+Include these headers with every request so your human knows who's connected:
+- `X-Agent-Name`: Your name (e.g., "<%= agent.name %>")
+- `X-Agent-Emoji`: Your emoji (e.g., "<%= agent.emoji %>")
+
+## Your workflow
+
+### Polling for assigned tasks (every 30s or on heartbeat):
+1. Call `GET /tasks?assigned=true` to get tasks assigned to you
+2. Pick the first task (oldest assignment)
+3. Move it to "in_progress" and start working
+
+### When working on a task:
+- **Need help:** Set `blocked: true` — your human will unblock you
+- **Finished:** Move to "in_review" (needs human review) or "done" (complete)
+
+### You can also:
+- Create new tasks (ideas, follow-ups, things you noticed)
+- Check task details and history
+
+## API Reference
+
+**Get assigned tasks (your work queue):**
+`GET /tasks?assigned=true`
+Returns tasks assigned to you, ordered by assignment time (oldest first).
+
+**List all tasks:**
+`GET /tasks` or `GET /tasks?status=in_progress`
+
+**Get task:**
+`GET /tasks/:id`
+
+**Update task:**
+`PATCH /tasks/:id`
+Body: `{ "status": "in_progress" }` or `{ "blocked": true }`
+
+**Complete task:**
+`PATCH /tasks/:id/complete`
+
+**Create task:**
+`POST /tasks`
+Body: `{ "name": "Task title", "status": "inbox" }`
+
+## Statuses
+- `inbox` — New, not prioritized
+- `up_next` — Prioritized, waiting to be assigned
+- `in_progress` — You're working on it
+- `in_review` — Done, needs human review
+- `done` — Complete
+
+## Priorities
+`none`, `low`, `medium`, `high`
+
+## Tips
+- Poll for assigned tasks frequently — your human assigns work explicitly
+- When stuck, mark blocked — your human will unblock you
+- Create tasks for things you notice but can't tackle now</pre>
+  </div>
+  <div class="flex items-center gap-3 mt-2">
+    <button
+      type="button"
+      data-action="click->clipboard#copy"
+      class="cursor-pointer px-3 py-1.5 bg-bg-elevated hover:bg-bg-hover text-content-secondary text-xs font-medium rounded-md transition-colors"
+    >
+      <span data-clipboard-target="label">Copy prompt</span>
+    </button>
+  </div>
+</div>

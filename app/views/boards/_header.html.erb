@@ -86,14 +86,24 @@
       <span class="hidden sm:inline">Board settings</span>
     </button>
 
-    <%# Agent indicator (links to settings) %>
-    <% agent_connected = current_user.agent_last_active_at.present? %>
-    <%= link_to settings_path,
-        class: "relative w-7 h-7 rounded-md bg-bg-elevated hover:bg-bg-hover flex items-center justify-center text-sm transition-colors",
-        title: agent_connected ? "#{current_user.agent_name || 'Agent'} • Last active: #{time_ago_in_words(current_user.agent_last_active_at)} ago" : "Configure agent" do %>
-      <%= agent_connected ? (current_user.agent_emoji || "🦞") : "🦞" %>
-      <% if agent_connected && current_user.agent_last_active_at > 5.minutes.ago %>
-        <span class="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-bg-base"></span>
+    <%# Agent indicators (links to settings) %>
+    <% user_agents = current_user.agents.order(:created_at) %>
+    <% if user_agents.any? %>
+      <% user_agents.each do |agent| %>
+        <%= link_to settings_path,
+            class: "relative w-7 h-7 rounded-md bg-bg-elevated hover:bg-bg-hover flex items-center justify-center text-sm transition-colors",
+            title: agent.last_active_at.present? ? "#{agent.name} • Last active: #{time_ago_in_words(agent.last_active_at)} ago" : "#{agent.name} • Not connected" do %>
+          <%= agent.emoji %>
+          <% if agent.last_active_at.present? && agent.last_active_at > 5.minutes.ago %>
+            <span class="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-bg-base"></span>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% else %>
+      <%= link_to settings_path,
+          class: "relative w-7 h-7 rounded-md bg-bg-elevated hover:bg-bg-hover flex items-center justify-center text-sm transition-colors",
+          title: "Configure agent" do %>
+        🦞
       <% end %>
     <% end %>
 
@@ -202,8 +212,8 @@
         <label class="block text-sm font-medium text-content-secondary mb-2">Icon</label>
         <div class="flex flex-wrap gap-2" id="icon-group">
           <% available_icons = Board::DEFAULT_ICONS.dup %>
-          <% if current_user.agent_last_active_at.present? && current_user.agent_emoji.present? && !available_icons.include?(current_user.agent_emoji) %>
-            <% available_icons << current_user.agent_emoji %>
+          <% current_user.agents.each do |agent| %>
+            <% available_icons << agent.emoji if agent.emoji.present? && !available_icons.include?(agent.emoji) %>
           <% end %>
           <% available_icons.each do |icon| %>
             <button type="button"
@@ -275,8 +285,8 @@
         <label class="block text-sm font-medium text-content-secondary mb-2">Icon</label>
         <div class="flex flex-wrap gap-2" id="edit-icon-group">
           <% edit_icons = Board::DEFAULT_ICONS.dup %>
-          <% if current_user.agent_last_active_at.present? && current_user.agent_emoji.present? && !edit_icons.include?(current_user.agent_emoji) %>
-            <% edit_icons << current_user.agent_emoji %>
+          <% current_user.agents.each do |agent| %>
+            <% edit_icons << agent.emoji if agent.emoji.present? && !edit_icons.include?(agent.emoji) %>
           <% end %>
           <%# Also include the current board's icon if it's custom %>
           <% if @board.icon.present? && !edit_icons.include?(@board.icon) %>
