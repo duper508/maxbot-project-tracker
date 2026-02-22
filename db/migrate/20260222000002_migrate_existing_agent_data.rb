@@ -14,12 +14,25 @@ class MigrateExistingAgentData < ActiveRecord::Migration[8.1]
       WHERE agent_name IS NOT NULL OR agent_last_active_at IS NOT NULL
     SQL
 
-    # Link existing api_tokens to the user's new agent
+    # Link only the most recently used api_token per user to the agent.
+    # Delete any older tokens to avoid leaving stale credentials active.
     execute <<~SQL
       UPDATE api_tokens
       SET agent_id = agents.id
       FROM agents
       WHERE api_tokens.user_id = agents.user_id
+        AND api_tokens.id = (
+          SELECT id FROM api_tokens t2
+          WHERE t2.user_id = agents.user_id
+          ORDER BY t2.last_used_at DESC NULLS LAST, t2.created_at DESC
+          LIMIT 1
+        )
+    SQL
+
+    execute <<~SQL
+      DELETE FROM api_tokens
+      WHERE agent_id IS NULL
+        AND user_id IN (SELECT user_id FROM agents)
     SQL
 
     # Link tasks where assigned_to_agent = true to the agent

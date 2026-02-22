@@ -26,7 +26,8 @@ class AgentsController < ApplicationController
   end
 
   def regenerate_token
-    @agent.api_token&.destroy
+    ApiToken.where(agent_id: @agent.id).delete_all
+    @agent.reload
     @agent.create_api_token!(user: current_user, name: "#{@agent.name} Agent Token")
     redirect_to settings_path, notice: "Token regenerated for \"#{@agent.name}\"."
   end
