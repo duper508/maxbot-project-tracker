@@ -9,6 +9,11 @@ class OmniauthCallbacksController < ApplicationController
       return
     end
 
+    unless User.github_oauth_allowed?(auth)
+      redirect_to new_session_path, alert: "Your GitHub account is not authorized for this ClawDeck instance."
+      return
+    end
+
     user = User.find_or_create_from_github(auth)
 
     if user.persisted?
