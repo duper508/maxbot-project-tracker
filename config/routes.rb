@@ -32,8 +32,14 @@ Rails.application.routes.draw do
   get "/auth/:provider/callback", to: "omniauth_callbacks#github", as: :omniauth_callback
   get "/auth/failure", to: "omniauth_callbacks#failure"
   resources :passwords, param: :token
-  resource :settings, only: [ :show, :update ], controller: "profiles" do
-    post :regenerate_api_token
+  resource :settings, only: [ :show, :update ], controller: "profiles"
+
+  # Agent management
+  resources :agents, only: [ :create, :update, :destroy ] do
+    member do
+      post :regenerate_token
+      get :prompt
+    end
   end
 
   # Boards (multi-board kanban views)

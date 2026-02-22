@@ -59,7 +59,12 @@ class Boards::TasksController < ApplicationController
 
   def assign
     @task.activity_source = "web"
-    @task.assign_to_agent!
+    agent = if params[:agent_id].present?
+      current_user.agents.find(params[:agent_id])
+    else
+      current_user.default_agent
+    end
+    @task.assign_to_agent!(agent)
     respond_to do |format|
       format.turbo_stream do
         render turbo_stream: [

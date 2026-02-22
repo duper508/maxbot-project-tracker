@@ -61,131 +61,99 @@
     <% end %>
   </div>
 
-  <!-- Section 2: OpenClaw Integration -->
+  <!-- Section 2: Agents -->
   <div class="bg-bg-surface border border-border rounded-lg p-5 space-y-4">
-    <div class="flex items-center gap-2">
-      <span class="text-lg">🦞</span>
-      <h3 class="text-sm font-semibold text-content font-display">OpenClaw Integration</h3>
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="text-lg">🦞</span>
+        <h3 class="text-sm font-semibold text-content font-display">Agents</h3>
+      </div>
     </div>
 
     <p class="text-xs text-content-secondary">
-      Connect your OpenClaw agent to ClawDeck. Copy the prompt below and add it to your agent's configuration.
+      Connect AI agents to ClawDeck. Each agent gets its own API token and prompt. Add a new agent, then copy its prompt into your agent's configuration.
     </p>
 
-    <% api_url = "#{request.base_url}/api/v1" %>
-    <% api_token = @api_token.token %>
+    <% if @agents.any? %>
+      <div class="space-y-3">
+        <% @agents.each do |agent| %>
+          <div class="border border-border rounded-lg p-4 space-y-3" data-controller="toggle">
+            <!-- Agent Header -->
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <span class="text-xl"><%= agent.emoji %></span>
+                <div>
+                  <span class="text-sm font-medium text-content"><%= agent.name %></span>
+                  <% status = agent.status %>
+                  <span class="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium
+                    <%= case status
+                        when 'active' then 'bg-green-500/20 text-green-400'
+                        when 'working' then 'bg-accent/20 text-accent'
+                        when 'idle' then 'bg-yellow-500/20 text-yellow-400'
+                        else 'bg-bg-elevated text-content-muted'
+                        end %>">
+                    <%= status.titleize %>
+                  </span>
+                </div>
+              </div>
+              <div class="flex items-center gap-1">
+                <% if agent.last_active_at.present? %>
+                  <span class="text-[10px] text-content-muted mr-2">Last active: <%= time_ago_in_words(agent.last_active_at) %> ago</span>
+                <% end %>
+              </div>
+            </div>
 
-    <!-- Comprehensive agent prompt -->
-    <div data-controller="clipboard">
-      <div class="bg-bg-elevated rounded-md max-h-96 overflow-y-auto">
-        <pre
-          data-clipboard-target="source"
-          class="px-3 py-3 text-xs font-mono text-content-secondary whitespace-pre-wrap break-words leading-relaxed"
-># ClawDeck — Your Task Dashboard
+            <!-- Agent Actions -->
+            <div class="flex flex-wrap items-center gap-2">
+              <button type="button"
+                      data-action="click->toggle#toggle"
+                      data-toggle-target="button"
+                      class="cursor-pointer px-2.5 py-1.5 bg-bg-elevated hover:bg-bg-hover text-content-secondary text-xs font-medium rounded-md transition-colors">
+                Show Prompt
+              </button>
 
-ClawDeck is where your human manages your work queue. Think of it as your shared kanban board.
+              <%= button_to regenerate_token_agent_path(agent),
+                  method: :post,
+                  data: { turbo_confirm: "This will invalidate the current token for \"#{agent.name}\". Continue?" },
+                  class: "cursor-pointer px-2.5 py-1.5 bg-bg-elevated hover:bg-bg-hover text-content-secondary text-xs font-medium rounded-md transition-colors" do %>
+                Regenerate Token
+              <% end %>
 
-## How it works
+              <%= button_to agent_path(agent),
+                  method: :delete,
+                  data: { turbo_confirm: "Remove agent \"#{agent.name}\"? This will revoke its API token and unassign its tasks." },
+                  class: "cursor-pointer px-2.5 py-1.5 bg-bg-elevated hover:bg-red-500/20 text-content-muted hover:text-red-400 text-xs font-medium rounded-md transition-colors" do %>
+                Remove
+              <% end %>
+            </div>
 
-1. Your human creates tasks and organizes them on the board
-2. Your human explicitly assigns tasks to you when ready
-3. You poll for assigned tasks and work on them
-4. You update progress and mark things done
-5. Your human sees everything in real-time
-
-## Connection
-
-- **API URL:** <%= api_url %>
-- **Token:** <%= api_token %>
-- **Auth Header:** `Authorization: Bearer <%= api_token %>`
-
-## Identify yourself
-
-Include these headers with every request so your human knows who's connected:
-- `X-Agent-Name`: Your name (e.g., "<%= @user.agent_name.presence || "OpenClaw" %>")
-- `X-Agent-Emoji`: Your emoji (e.g., "<%= @user.agent_emoji.presence || "🦞" %>")
-
-## Your workflow
-
-### Polling for assigned tasks (every 30s or on heartbeat):
-1. Call `GET /tasks?assigned=true` to get tasks assigned to you
-2. Pick the first task (oldest assignment)
-3. Move it to "in_progress" and start working
-
-### When working on a task:
-- **Need help:** Set `blocked: true` — your human will unblock you
-- **Finished:** Move to "in_review" (needs human review) or "done" (complete)
-
-### You can also:
-- Create new tasks (ideas, follow-ups, things you noticed)
-- Check task details and history
-
-## API Reference
-
-**Get assigned tasks (your work queue):**
-`GET /tasks?assigned=true`
-Returns tasks assigned to you, ordered by assignment time (oldest first).
-
-**List all tasks:**
-`GET /tasks` or `GET /tasks?status=in_progress`
-
-**Get task:**
-`GET /tasks/:id`
-
-**Update task:**
-`PATCH /tasks/:id`
-Body: `{ "status": "in_progress" }` or `{ "blocked": true }`
-
-**Complete task:**
-`PATCH /tasks/:id/complete`
-
-**Create task:**
-`POST /tasks`
-Body: `{ "name": "Task title", "status": "inbox" }`
-
-## Statuses
-- `inbox` — New, not prioritized
-- `up_next` — Prioritized, waiting to be assigned
-- `in_progress` — You're working on it
-- `in_review` — Done, needs human review
-- `done` — Complete
-
-## Priorities
-`none`, `low`, `medium`, `high`
-
-## Tips
-- Poll for assigned tasks frequently — your human assigns work explicitly
-- When stuck, mark blocked — your human will unblock you
-- Create tasks for things you notice but can't tackle now</pre>
+            <!-- Expandable Prompt Section -->
+            <div data-toggle-target="content" class="hidden">
+              <%= render "agents/prompt", agent: agent %>
+            </div>
+          </div>
+        <% end %>
       </div>
-      <div class="flex items-center gap-3 mt-2">
-        <button
-          type="button"
-          data-action="click->clipboard#copy"
-          class="cursor-pointer px-3 py-1.5 bg-bg-elevated hover:bg-bg-hover text-content-secondary text-xs font-medium rounded-md transition-colors"
-        >
-          <span data-clipboard-target="label">Copy</span>
-        </button>
-        <%= button_to "Regenerate token", regenerate_api_token_settings_path,
-            method: :post,
-            data: { turbo_confirm: "This will invalidate your current token. Continue?" },
-            class: "cursor-pointer text-xs text-content-muted hover:text-content-secondary transition-colors" %>
+    <% else %>
+      <div class="text-center py-6">
+        <p class="text-sm text-content-muted">No agents yet. Add one to get started.</p>
       </div>
-    </div>
+    <% end %>
 
-    <!-- Connected Agent (within same box) -->
-    <div class="pt-4 border-t border-border">
-      <p class="text-xs font-medium text-content-secondary mb-3">Connected Agent</p>
-
-      <% if @user.agent_last_active_at.present? %>
-        <div class="flex items-center gap-3">
-          <span class="text-xl"><%= @user.agent_emoji || "🦞" %></span>
-          <span class="text-sm text-content"><%= @user.agent_name || "Agent" %></span>
-          <span class="text-xs text-content-muted">•</span>
-          <span class="text-xs text-content-muted">Last active: <%= time_ago_in_words(@user.agent_last_active_at) %> ago</span>
+    <!-- Add Agent Form -->
+    <div class="pt-3 border-t border-border">
+      <%= form_with model: Agent.new, url: agents_path, class: "flex items-end gap-3" do |form| %>
+        <div class="flex-1">
+          <label class="block text-xs font-medium text-content-secondary mb-1">Name</label>
+          <%= form.text_field :name, placeholder: "e.g. OpenClaw", required: true, class: "block w-full bg-bg-elevated border-0 rounded-md px-3 py-2 text-sm text-content placeholder:text-content-muted focus:ring-1 focus:ring-accent focus:outline-none" %>
         </div>
-      <% else %>
-        <p class="text-xs text-content-muted">No agent connected yet</p>
+        <div class="w-20">
+          <label class="block text-xs font-medium text-content-secondary mb-1">Emoji</label>
+          <%= form.text_field :emoji, value: "🦞", maxlength: 4, class: "block w-full bg-bg-elevated border-0 rounded-md px-3 py-2 text-sm text-content text-center focus:ring-1 focus:ring-accent focus:outline-none" %>
+        </div>
+        <div>
+          <%= form.submit "Add Agent", class: "cursor-pointer px-4 py-2 bg-accent text-content hover:bg-accent-hover text-xs font-semibold rounded-md transition-colors duration-200 whitespace-nowrap" %>
+        </div>
       <% end %>
     </div>
   </div>

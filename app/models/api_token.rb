@@ -1,5 +1,6 @@
 class ApiToken < ApplicationRecord
   belongs_to :user
+  belongs_to :agent, optional: true
 
   validates :token, presence: true, uniqueness: true
   validates :name, presence: true
@@ -13,7 +14,7 @@ class ApiToken < ApplicationRecord
     return nil unless api_token
 
     api_token.touch(:last_used_at)
-    api_token.user
+    api_token
   end
 
   private

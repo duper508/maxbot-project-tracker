@@ -5,11 +5,16 @@ class User < ApplicationRecord
   has_many :boards, dependent: :destroy
   has_many :tasks, dependent: :destroy
   has_many :api_tokens, dependent: :destroy
+  has_many :agents, dependent: :destroy
   has_one_attached :avatar
 
-  # Primary API token for agent integration
+  # Primary API token for agent integration (legacy - prefer agent.api_token)
   def api_token
     api_tokens.first || api_tokens.create!(name: "Default")
+  end
+
+  def default_agent
+    agents.order(:created_at).first
   end
 
   normalizes :email_address, with: ->(e) { e.strip.downcase }

@@ -1,6 +1,7 @@
 class TaskActivity < ApplicationRecord
   belongs_to :task
   belongs_to :user, optional: true
+  belongs_to :agent, optional: true
 
   validates :action, presence: true
 
@@ -9,10 +10,11 @@ class TaskActivity < ApplicationRecord
 
   scope :recent, -> { order(created_at: :desc) }
 
-  def self.record_creation(task, source: "web", actor_name: nil, actor_emoji: nil, note: nil)
+  def self.record_creation(task, source: "web", actor_name: nil, actor_emoji: nil, note: nil, agent: nil)
     create!(
       task: task,
       user: task.user,
+      agent: agent,
       action: "created",
       source: source,
       actor_type: source == "api" ? "agent" : "user",
@@ -22,10 +24,11 @@ class TaskActivity < ApplicationRecord
     )
   end
 
-  def self.record_status_change(task, old_status:, new_status:, source: "web", actor_name: nil, actor_emoji: nil, note: nil)
+  def self.record_status_change(task, old_status:, new_status:, source: "web", actor_name: nil, actor_emoji: nil, note: nil, agent: nil)
     create!(
       task: task,
       user: Current.user,
+      agent: agent,
       action: "moved",
       field_name: "status",
       old_value: old_status,
@@ -38,7 +41,7 @@ class TaskActivity < ApplicationRecord
     )
   end
 
-  def self.record_changes(task, changes, source: "web", actor_name: nil, actor_emoji: nil, note: nil)
+  def self.record_changes(task, changes, source: "web", actor_name: nil, actor_emoji: nil, note: nil, agent: nil)
     TRACKED_FIELDS.each do |field|
       next unless changes.key?(field)
 
@@ -46,6 +49,7 @@ class TaskActivity < ApplicationRecord
       create!(
         task: task,
         user: Current.user,
+        agent: agent,
         action: "updated",
         field_name: field,
         old_value: format_value(field, old_val),
