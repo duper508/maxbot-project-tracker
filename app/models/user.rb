@@ -37,8 +37,8 @@ class User < ApplicationRecord
 
     return true if allowed_logins.empty? && allowed_emails.empty?
 
-    login = auth&.dig("info", "nickname").to_s.downcase
-    email = auth&.dig("info", "email").to_s.downcase
+    login = auth&.info&.nickname.to_s.downcase
+    email = auth&.info&.email.to_s.downcase
 
     allowed_logins.include?(login) || allowed_emails.include?(email)
   end
@@ -104,6 +104,7 @@ class User < ApplicationRecord
       .map { |value| value.strip.downcase }
       .reject(&:blank?)
   end
+  private_class_method :parse_env_csv
 
   def password_required?
     # Password is required for new non-OAuth users or when password is being set
