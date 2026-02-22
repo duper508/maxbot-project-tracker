@@ -7,7 +7,14 @@ class ApiToken < ApplicationRecord
 
   before_validation :generate_token, on: :create
 
+  # Returns the User for backward compatibility
   def self.authenticate(token)
+    api_token = authenticate_token(token)
+    api_token&.user
+  end
+
+  # Returns the ApiToken record (used by token authentication concern)
+  def self.authenticate_token(token)
     return nil if token.blank?
 
     api_token = find_by(token: token)

@@ -11,7 +11,7 @@ module Api
 
     def authenticate_api_token
       token = extract_token_from_header
-      api_token = ApiToken.authenticate(token)
+      api_token = ApiToken.authenticate_token(token)
 
       unless api_token
         render json: { error: "Unauthorized" }, status: :unauthorized

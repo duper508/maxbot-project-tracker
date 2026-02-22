@@ -63,6 +63,12 @@ module Api
         else
           current_agent
         end
+
+        unless agent
+          render json: { error: "No agent specified. Provide agent_id or authenticate with an agent token." }, status: :unprocessable_entity
+          return
+        end
+
         @task.assign_to_agent!(agent)
         render json: task_json(@task)
       end
