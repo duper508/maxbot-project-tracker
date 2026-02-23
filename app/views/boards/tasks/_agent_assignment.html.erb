@@ -35,6 +35,7 @@
           <%= button_to assign_board_task_path(board, task),
               method: :patch,
               params: { agent_id: agent.id },
+              data: { action: "click->dropdown#close" },
               class: "cursor-pointer w-full flex items-center gap-2 px-3 py-2 text-sm text-content-secondary hover:bg-bg-hover transition-colors" do %>
             <%= agent_icon(agent, size_class: "w-5 h-5") %>
             <span><%= agent.name %></span>

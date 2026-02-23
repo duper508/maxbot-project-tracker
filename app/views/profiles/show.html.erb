@@ -121,7 +121,7 @@
                     <div class="flex flex-wrap gap-2 justify-center">
                       <% agent_icon_options.each do |option| %>
                         <label class="cursor-pointer group">
-                          <%= f.radio_button :emoji, option[:key], class: "peer sr-only" %>
+                          <%= f.radio_button :emoji, option[:key], class: "peer sr-only", "aria-label": "Change to #{option[:label]} icon" %>
                           <div class="p-1.5 rounded-md border border-border bg-bg-surface peer-checked:border-accent peer-checked:bg-accent/10 peer-checked:ring-1 peer-checked:ring-accent hover:bg-bg-hover transition-all" title="<%= option[:label] %>">
                             <%= image_tag "agents/#{option[:icon]}", class: "w-6 h-6" %>
                           </div>
@@ -176,7 +176,7 @@
             <div class="flex flex-wrap gap-2">
               <% agent_icon_options.each do |option| %>
                 <label class="cursor-pointer group">
-                  <%= form.radio_button :emoji, option[:key], checked: option[:key] == "lobster", class: "peer sr-only" %>
+                  <%= form.radio_button :emoji, option[:key], checked: option[:key] == "lobster", class: "peer sr-only", "aria-label": "Select #{option[:label]} icon" %>
                   <div class="p-1.5 rounded-md border border-border bg-bg-elevated peer-checked:border-accent peer-checked:bg-accent/10 peer-checked:ring-1 peer-checked:ring-accent hover:bg-bg-hover transition-all" title="<%= option[:label] %>">
                     <%= image_tag "agents/#{option[:icon]}", class: "w-6 h-6" %>
                   </div>
