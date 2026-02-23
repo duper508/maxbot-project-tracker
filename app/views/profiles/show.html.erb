@@ -81,7 +81,7 @@
             <!-- Agent Header -->
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3">
-                <span class="text-xl"><%= agent.emoji %></span>
+                <%= agent_icon(agent, size_class: "w-8 h-8") %>
                 <div>
                   <span class="text-sm font-medium text-content"><%= agent.name %></span>
                   <% status = agent.status %>
@@ -111,6 +111,28 @@
                       class="cursor-pointer px-2.5 py-1.5 bg-bg-elevated hover:bg-bg-hover text-content-secondary text-xs font-medium rounded-md transition-colors">
                 Show Prompt
               </button>
+
+              <details class="group relative">
+                <summary class="cursor-pointer px-2.5 py-1.5 bg-bg-elevated hover:bg-bg-hover text-content-secondary text-xs font-medium rounded-md transition-colors list-none">
+                  Change Icon
+                </summary>
+                <div class="absolute right-0 top-full mt-2 z-10 p-3 min-w-[200px] border border-border rounded-lg bg-bg-elevated shadow-xl">
+                  <%= form_with model: agent, url: agent_path(agent), method: :patch, class: "flex flex-col gap-3" do |f| %>
+                    <div class="flex flex-wrap gap-2 justify-center">
+                      <% agent_icon_options.each do |option| %>
+                        <label class="cursor-pointer group">
+                          <%= f.radio_button :emoji, option[:key], class: "peer sr-only", "aria-label": "Change to #{option[:label]} icon" %>
+                          <div class="p-1.5 rounded-md border border-border bg-bg-surface peer-checked:border-accent peer-checked:bg-accent/10 peer-checked:ring-1 peer-checked:ring-accent hover:bg-bg-hover transition-all" title="<%= option[:label] %>">
+                            <%= image_tag "agents/#{option[:icon]}", class: "w-6 h-6" %>
+                          </div>
+                          <div class="text-xs text-content-muted group-hover:text-content-secondary text-center mt-1"><%= option[:label] %></div>
+                        </label>
+                      <% end %>
+                    </div>
+                    <%= f.submit "Update Icon", class: "w-full cursor-pointer px-2 py-1.5 bg-accent text-content hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed text-xs font-semibold rounded transition-colors", data: { turbo: true } %>
+                  <% end %>
+                </div>
+              </details>
 
               <%= button_to regenerate_token_agent_path(agent),
                   method: :post,
@@ -142,17 +164,31 @@
 
     <!-- Add Agent Form -->
     <div class="pt-3 border-t border-border">
-      <%= form_with model: Agent.new, url: agents_path, class: "flex items-end gap-3" do |form| %>
-        <div class="flex-1">
-          <label class="block text-xs font-medium text-content-secondary mb-1">Name</label>
-          <%= form.text_field :name, placeholder: "e.g. OpenClaw", required: true, class: "block w-full bg-bg-elevated border-0 rounded-md px-3 py-2 text-sm text-content placeholder:text-content-muted focus:ring-1 focus:ring-accent focus:outline-none" %>
+      <%= form_with model: Agent.new, url: agents_path, class: "flex flex-col gap-4" do |form| %>
+        <div class="flex items-start gap-3">
+          <div class="flex-1">
+            <label class="block text-xs font-medium text-content-secondary mb-1">Name</label>
+            <%= form.text_field :name, placeholder: "e.g. OpenClaw", required: true, class: "block w-full bg-bg-elevated border-0 rounded-md px-3 py-2 text-sm text-content placeholder:text-content-muted focus:ring-1 focus:ring-accent focus:outline-none" %>
+          </div>
+          
+          <div class="flex-1">
+            <label class="block text-xs font-medium text-content-secondary mb-1">Icon</label>
+            <div class="flex flex-wrap gap-2">
+              <% agent_icon_options.each do |option| %>
+                <label class="cursor-pointer group">
+                  <%= form.radio_button :emoji, option[:key], checked: option[:key] == "lobster", class: "peer sr-only", "aria-label": "Select #{option[:label]} icon" %>
+                  <div class="p-1.5 rounded-md border border-border bg-bg-elevated peer-checked:border-accent peer-checked:bg-accent/10 peer-checked:ring-1 peer-checked:ring-accent hover:bg-bg-hover transition-all" title="<%= option[:label] %>">
+                    <%= image_tag "agents/#{option[:icon]}", class: "w-6 h-6" %>
+                  </div>
+                  <div class="text-xs text-content-muted group-hover:text-content-secondary text-center mt-1"><%= option[:label] %></div>
+                </label>
+              <% end %>
+            </div>
+          </div>
         </div>
-        <div class="w-20">
-          <label class="block text-xs font-medium text-content-secondary mb-1">Emoji</label>
-          <%= form.text_field :emoji, value: "🦞", maxlength: 4, class: "block w-full bg-bg-elevated border-0 rounded-md px-3 py-2 text-sm text-content text-center focus:ring-1 focus:ring-accent focus:outline-none" %>
-        </div>
-        <div>
-          <%= form.submit "Add Agent", class: "cursor-pointer px-4 py-2 bg-accent text-content hover:bg-accent-hover text-xs font-semibold rounded-md transition-colors duration-200 whitespace-nowrap" %>
+
+        <div class="flex justify-end">
+          <%= form.submit "Add Agent", class: "cursor-pointer px-4 py-2 bg-accent text-content hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed text-xs font-semibold rounded-md transition-colors duration-200 whitespace-nowrap", data: { turbo: true } %>
         </div>
       <% end %>
     </div>
