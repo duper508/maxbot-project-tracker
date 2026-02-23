@@ -4,8 +4,22 @@ class Agent < ApplicationRecord
   has_many :tasks, dependent: :nullify
   has_many :task_activities, dependent: :nullify
 
+  VALID_EMOJI = {
+    "gemini" => "gemini.svg",
+    "codex" => "codex.svg",
+    "claude" => "claude.svg",
+    "lobster" => "lobster.svg",
+    "robot" => "robot.svg",
+    "✨" => "gemini.svg",
+    "💻" => "codex.svg",
+    "🧠" => "claude.svg",
+    "🦞" => "lobster.svg",
+    "🤖" => "robot.svg"
+  }.freeze
+
   validates :name, presence: true
   validates :name, uniqueness: { scope: :user_id, message: "already exists" }
+  validates :emoji, presence: true, inclusion: { in: VALID_EMOJI.keys, message: "is not a valid agent icon" }
 
   after_create :generate_api_token
   before_destroy :unassign_tasks

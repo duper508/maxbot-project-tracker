@@ -26,29 +26,28 @@ module ApplicationHelper
   end
 
   def agent_icon(agent, size_class: "w-5 h-5")
-    return raw "<span>❓</span>" unless agent
+    return raw "<span>❓</span>" unless agent&.emoji
     
-    # Check if the emoji value matches one of our known SVG icons
-    icon_map = {
-      "gemini" => "gemini.svg",
-      "codex" => "codex.svg",
-      "claude" => "claude.svg",
-      "lobster" => "lobster.svg",
-      "robot" => "robot.svg",
-      "✨" => "gemini.svg", # Map common emojis to SVGs too
-      "💻" => "codex.svg",
-      "🧠" => "claude.svg",
-      "🦞" => "lobster.svg",
-      "🤖" => "robot.svg"
-    }
-
+    # Map emoji to SVG file using Agent model's VALID_EMOJI mapping
+    icon_map = Agent::VALID_EMOJI
     icon_file = icon_map[agent.emoji]
     
     if icon_file
       image_tag "agents/#{icon_file}", class: size_class, alt: agent.name
     else
       # Fallback to rendering the emoji string directly
-      content_tag(:span, agent.emoji, class: "#{size_class} flex items-center justify-center text-lg leading-none")
+      content_tag(:span, agent.emoji || "❓", class: "#{size_class} flex items-center justify-center text-lg leading-none")
     end
+  end
+
+  # Returns the list of available agent icons for UI pickers
+  def agent_icon_options
+    [
+      { key: "gemini", icon: "gemini.svg", label: "Gemini" },
+      { key: "codex", icon: "codex.svg", label: "Codex" },
+      { key: "claude", icon: "claude.svg", label: "Claude" },
+      { key: "lobster", icon: "lobster.svg", label: "Lobster" },
+      { key: "robot", icon: "robot.svg", label: "Robot" }
+    ]
   end
 end
