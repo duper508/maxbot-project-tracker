@@ -24,4 +24,31 @@ module ApplicationHelper
       '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 text-content-secondary"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>'.html_safe
     end
   end
+
+  def agent_icon(agent, size_class: "w-5 h-5")
+    return raw "<span>❓</span>" unless agent
+    
+    # Check if the emoji value matches one of our known SVG icons
+    icon_map = {
+      "gemini" => "gemini.svg",
+      "codex" => "codex.svg",
+      "claude" => "claude.svg",
+      "lobster" => "lobster.svg",
+      "robot" => "robot.svg",
+      "✨" => "gemini.svg", # Map common emojis to SVGs too
+      "💻" => "codex.svg",
+      "🧠" => "claude.svg",
+      "🦞" => "lobster.svg",
+      "🤖" => "robot.svg"
+    }
+
+    icon_file = icon_map[agent.emoji]
+    
+    if icon_file
+      image_tag "agents/#{icon_file}", class: size_class, alt: agent.name
+    else
+      # Fallback to rendering the emoji string directly
+      content_tag(:span, agent.emoji, class: "#{size_class} flex items-center justify-center text-lg leading-none")
+    end
+  end
 end
