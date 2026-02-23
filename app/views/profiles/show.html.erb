@@ -175,11 +175,12 @@
             <label class="block text-xs font-medium text-content-secondary mb-1">Icon</label>
             <div class="flex flex-wrap gap-2">
               <% agent_icon_options.each do |option| %>
-                <label class="cursor-pointer group relative">
+                <label class="cursor-pointer group">
                   <%= form.radio_button :emoji, option[:key], checked: option[:key] == "lobster", class: "peer sr-only" %>
                   <div class="p-1.5 rounded-md border border-border bg-bg-elevated peer-checked:border-accent peer-checked:bg-accent/10 peer-checked:ring-1 peer-checked:ring-accent hover:bg-bg-hover transition-all" title="<%= option[:label] %>">
                     <%= image_tag "agents/#{option[:icon]}", class: "w-6 h-6" %>
                   </div>
+                  <div class="text-xs text-content-muted group-hover:text-content-secondary text-center mt-1"><%= option[:label] %></div>
                 </label>
               <% end %>
             </div>
@@ -187,7 +188,7 @@
         </div>
 
         <div class="flex justify-end">
-          <%= form.submit "Add Agent", class: "cursor-pointer px-4 py-2 bg-accent text-content hover:bg-accent-hover text-xs font-semibold rounded-md transition-colors duration-200 whitespace-nowrap" %>
+          <%= form.submit "Add Agent", class: "cursor-pointer px-4 py-2 bg-accent text-content hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed text-xs font-semibold rounded-md transition-colors duration-200 whitespace-nowrap", data: { turbo: true } %>
         </div>
       <% end %>
     </div>
