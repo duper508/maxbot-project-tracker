@@ -26,6 +26,7 @@ interface TaskDialogProps {
   assignee?: Agent;
   creator?: Agent;
   agents: Agent[];
+  boardId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreateTask?: (draft: TaskDraft) => void;
@@ -39,6 +40,7 @@ export function TaskDialog({
   assignee,
   creator,
   agents,
+  boardId,
   open,
   onOpenChange,
   onCreateTask,
@@ -70,16 +72,13 @@ export function TaskDialog({
     e.preventDefault();
     if (!title.trim() || !onCreateTask) return;
     onCreateTask({
-      boardId: task?.boardId ?? "board-1",
+      boardId: task?.boardId || boardId,
       title: title.trim(),
       description: description.trim() || undefined,
       priority,
       status,
       tags,
       assigneeId: assigneeId || undefined,
-      createdBy: "agent-1",
-      subtasksCompleted: 0,
-      subtasksTotal: 0,
       dueDate: dueDate || undefined,
     });
   };
@@ -87,7 +86,7 @@ export function TaskDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        key={task?.id ?? "create"}
+        key={task?.id ?? (open ? "create-open" : "create-closed")}
         className="max-w-2xl max-h-[90vh] overflow-y-auto"
       >
         {isCreate ? (

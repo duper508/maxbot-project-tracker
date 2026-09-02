@@ -7,6 +7,7 @@ import { ListView } from "./components/ListView";
 import { TimelineView } from "./components/TimelineView";
 import { TaskDialog } from "./components/TaskDialog";
 import { EmptyState } from "./components/EmptyState";
+import { LoginDialog } from "./components/LoginDialog";
 import { useBoardData, type ViewMode } from "./hooks/useBoardData";
 import { Loader2 } from "lucide-react";
 import type { Task } from "./types";
@@ -15,7 +16,15 @@ function App() {
   const [view, setView] = useState<ViewMode>("board");
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const { data, isLoading, error, moveTask, createTask } = useBoardData();
+  const {
+    data,
+    isLoading,
+    error,
+    isUnauthorized,
+    moveTask,
+    createTask,
+    login,
+  } = useBoardData();
 
   const handleTaskClick = (task: Task) => {
     setSelectedTask(task);
@@ -35,11 +44,10 @@ function App() {
 
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <TopBar
-          boardName={data.board.name}
+          boardName={data.board.name || "Buzz Kanban"}
           view={view}
           onViewChange={setView}
           onNewTask={() => {
-            // Placeholder until backend mutation is wired
             setSelectedTask(null);
             setDialogOpen(true);
           }}
@@ -61,11 +69,11 @@ function App() {
           </div>
         ) : error ? (
           <EmptyState
-            variant="error"
-            title="Failed to load board"
+            variant={isUnauthorized ? "auth" : "error"}
+            title={isUnauthorized ? "Sign in required" : "Failed to load board"}
             description={error.message}
-            actionLabel="Try again"
-            onAction={() => window.location.reload()}
+            actionLabel={isUnauthorized ? undefined : "Try again"}
+            onAction={isUnauthorized ? undefined : () => window.location.reload()}
           />
         ) : data.tasks.length === 0 ? (
           <EmptyState
@@ -102,13 +110,16 @@ function App() {
         assignee={selectedAssignee}
         creator={selectedCreator}
         agents={data.agents}
+        boardId={data.board.id}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        onCreateTask={(draft) => {
-          createTask(draft);
+        onCreateTask={async (draft) => {
+          await createTask(draft);
           setDialogOpen(false);
         }}
       />
+
+      <LoginDialog open={isUnauthorized} onLogin={login} />
     </div>
   );
 }

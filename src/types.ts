@@ -12,7 +12,7 @@ export interface Agent {
 }
 
 export interface BoardColumn {
-  id: TaskStatus;
+  id: string;
   title: string;
   color: string;
   order: number;

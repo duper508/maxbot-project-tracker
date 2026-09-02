@@ -1,9 +1,9 @@
-import { Inbox, SearchX, AlertTriangle } from "lucide-react";
+import { Inbox, SearchX, AlertTriangle, Lock } from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "../lib/utils";
 
 interface EmptyStateProps {
-  variant?: "empty" | "search" | "error";
+  variant?: "empty" | "search" | "error" | "auth";
   title?: string;
   description?: string;
   actionLabel?: string;
@@ -15,6 +15,7 @@ const icons = {
   empty: Inbox,
   search: SearchX,
   error: AlertTriangle,
+  auth: Lock,
 };
 
 const defaults = {
@@ -29,6 +30,10 @@ const defaults = {
   error: {
     title: "Something went wrong",
     description: "We couldn't load the board. Try refreshing the page.",
+  },
+  auth: {
+    title: "Sign in required",
+    description: "Use the sign-in dialog to access this board.",
   },
 };
 
