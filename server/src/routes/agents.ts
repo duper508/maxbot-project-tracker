@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { z, OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import { authMiddleware, requireRole } from "../lib/auth.js";
 import type { Agent } from "../db/schema.js";
@@ -20,7 +19,7 @@ const listRoute = createRoute({
 
 app.openapi(listRoute, async (c) => {
   const data = await listAgents();
-  return c.json(data.map(agentToJson));
+  return c.json(data.map(agentToJson), 200);
 });
 
 const getRoute = createRoute({
@@ -36,9 +35,9 @@ const getRoute = createRoute({
 });
 
 app.openapi(getRoute, async (c) => {
-  const { id } = c.req.valid("params");
+  const { id } = c.req.valid("param");
   const agent = await getAgent(id);
-  return c.json(agentToJson(agent));
+  return c.json(agentToJson(agent), 200);
 });
 
 const createRouteDef = createRoute({

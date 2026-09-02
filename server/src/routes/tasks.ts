@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { z, OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import { authMiddleware, requireRole } from "../lib/auth.js";
 import type { Agent } from "../db/schema.js";
@@ -58,10 +57,10 @@ const listRoute = createRoute({
 });
 
 app.openapi(listRoute, async (c) => {
-  const { boardId } = c.req.valid("params");
+  const { boardId } = c.req.valid("param");
   const query = c.req.valid("query");
   const result = await listTasks({ boardId, ...query });
-  return c.json({ data: result.data.map(taskToJson), nextCursor: result.nextCursor });
+  return c.json({ data: result.data.map(taskToJson), nextCursor: result.nextCursor }, 200);
 });
 
 // POST /tasks
@@ -115,9 +114,9 @@ const getRoute = createRoute({
 });
 
 app.openapi(getRoute, async (c) => {
-  const { id } = c.req.valid("params");
+  const { id } = c.req.valid("param");
   const task = await getTask(id);
-  return c.json(taskToJson(task));
+  return c.json(taskToJson(task), 200);
 });
 
 // PATCH /tasks/:id
@@ -152,10 +151,10 @@ const updateRoute = createRoute({
 
 app.openapi(updateRoute, async (c) => {
   requireRole(c.get("agent"), ["owner", "editor"]);
-  const { id } = c.req.valid("params");
+  const { id } = c.req.valid("param");
   const body = c.req.valid("json");
   const task = await updateTask(id, c.get("agent").id, body);
-  return c.json(taskToJson(task));
+  return c.json(taskToJson(task), 200);
 });
 
 // DELETE /tasks/:id
@@ -173,7 +172,7 @@ const deleteRoute = createRoute({
 
 app.openapi(deleteRoute, async (c) => {
   requireRole(c.get("agent"), ["owner", "editor"]);
-  const { id } = c.req.valid("params");
+  const { id } = c.req.valid("param");
   await deleteTask(id);
   return c.body(null, 204);
 });
@@ -202,10 +201,10 @@ const moveRoute = createRoute({
 
 app.openapi(moveRoute, async (c) => {
   requireRole(c.get("agent"), ["owner", "editor"]);
-  const { id } = c.req.valid("params");
+  const { id } = c.req.valid("param");
   const { status } = c.req.valid("json");
   const task = await moveTask(id, c.get("agent").id, status);
-  return c.json(taskToJson(task));
+  return c.json(taskToJson(task), 200);
 });
 
 // POST /tasks/:id/assign
@@ -232,10 +231,10 @@ const assignRoute = createRoute({
 
 app.openapi(assignRoute, async (c) => {
   requireRole(c.get("agent"), ["owner", "editor"]);
-  const { id } = c.req.valid("params");
+  const { id } = c.req.valid("param");
   const { agentId } = c.req.valid("json");
   const task = await assignTask(id, c.get("agent").id, agentId);
-  return c.json(taskToJson(task));
+  return c.json(taskToJson(task), 200);
 });
 
 // POST /tasks/:id/close
@@ -253,9 +252,9 @@ const closeRoute = createRoute({
 
 app.openapi(closeRoute, async (c) => {
   requireRole(c.get("agent"), ["owner", "editor"]);
-  const { id } = c.req.valid("params");
+  const { id } = c.req.valid("param");
   const task = await closeTask(id, c.get("agent").id);
-  return c.json(taskToJson(task));
+  return c.json(taskToJson(task), 200);
 });
 
 // POST /tasks/:id/reopen
@@ -273,9 +272,9 @@ const reopenRoute = createRoute({
 
 app.openapi(reopenRoute, async (c) => {
   requireRole(c.get("agent"), ["owner", "editor"]);
-  const { id } = c.req.valid("params");
+  const { id } = c.req.valid("param");
   const task = await reopenTask(id, c.get("agent").id);
-  return c.json(taskToJson(task));
+  return c.json(taskToJson(task), 200);
 });
 
 // Comments
@@ -291,9 +290,9 @@ const listCommentsRoute = createRoute({
 });
 
 app.openapi(listCommentsRoute, async (c) => {
-  const { id } = c.req.valid("params");
+  const { id } = c.req.valid("param");
   const data = await listComments(id);
-  return c.json(data.map(commentToJson));
+  return c.json(data.map(commentToJson), 200);
 });
 
 const createCommentRoute = createRoute({
@@ -318,7 +317,7 @@ const createCommentRoute = createRoute({
 
 app.openapi(createCommentRoute, async (c) => {
   requireRole(c.get("agent"), ["owner", "editor"]);
-  const { id } = c.req.valid("params");
+  const { id } = c.req.valid("param");
   const { body } = c.req.valid("json");
   const comment = await createComment(id, c.get("agent").id, body);
   return c.json(commentToJson(comment), 201);
@@ -337,9 +336,9 @@ const listResourcesRoute = createRoute({
 });
 
 app.openapi(listResourcesRoute, async (c) => {
-  const { id } = c.req.valid("params");
+  const { id } = c.req.valid("param");
   const data = await listResources(id);
-  return c.json(data.map(resourceToJson));
+  return c.json(data.map(resourceToJson), 200);
 });
 
 const createResourceRoute = createRoute({
@@ -352,7 +351,7 @@ const createResourceRoute = createRoute({
       content: {
         "application/json": {
           schema: z.object({
-            type: z.string().min(1),
+            type: z.enum(["buzz-message", "openclaw-artifact", "github-pr", "github-issue", "doc", "url", "note"]),
             source: z.string().optional(),
             url: z.string().optional(),
             properties: z.record(z.unknown()).optional(),
@@ -369,7 +368,7 @@ const createResourceRoute = createRoute({
 
 app.openapi(createResourceRoute, async (c) => {
   requireRole(c.get("agent"), ["owner", "editor"]);
-  const { id } = c.req.valid("params");
+  const { id } = c.req.valid("param");
   const body = c.req.valid("json");
   const resource = await createResource({ ...body, taskId: id, addedBy: c.get("agent").id });
   return c.json(resourceToJson(resource), 201);
@@ -389,7 +388,7 @@ const deleteResourceRoute = createRoute({
 
 app.openapi(deleteResourceRoute, async (c) => {
   requireRole(c.get("agent"), ["owner", "editor"]);
-  const { id } = c.req.valid("params");
+  const { id } = c.req.valid("param");
   const { deleteResource } = await import("../services/resources.js");
   await deleteResource(id);
   return c.body(null, 204);
@@ -413,10 +412,10 @@ const listTaskActivitiesRoute = createRoute({
 });
 
 app.openapi(listTaskActivitiesRoute, async (c) => {
-  const { id } = c.req.valid("params");
+  const { id } = c.req.valid("param");
   const query = c.req.valid("query");
   const result = await listActivities({ taskId: id, ...query });
-  return c.json({ data: result.data.map(activityToJson), nextCursor: result.nextCursor });
+  return c.json({ data: result.data.map(activityToJson), nextCursor: result.nextCursor }, 200);
 });
 
 export default app;

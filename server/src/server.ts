@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { OpenAPIHono } from "@hono/zod-openapi";
@@ -15,6 +16,7 @@ import taskRoutes from "./routes/tasks.js";
 import activityRoutes from "./routes/activities.js";
 import webhookRoutes from "./routes/webhooks.js";
 import agentActionRoutes from "./routes/agent-actions.js";
+import openclawRoutes from "./routes/openclaw.js";
 
 const app = new OpenAPIHono();
 
@@ -39,6 +41,7 @@ app.route("/api/v1/tasks", taskRoutes);
 app.route("/api/v1/activities", activityRoutes);
 app.route("/api/v1/webhooks", webhookRoutes);
 app.route("/api/v1/agent-actions", agentActionRoutes);
+app.route("/api/v1/openclaw", openclawRoutes);
 
 // OpenAPI docs
 app.doc("/api/v1/openapi.json", {
@@ -51,7 +54,7 @@ app.doc("/api/v1/openapi.json", {
 app.get("/api/v1/docs", swaggerUI({ url: "/api/v1/openapi.json" }));
 
 // Static files + SPA fallback
-const distPath = new URL("../../dist", import.meta.url).pathname;
+const distPath = fileURLToPath(new URL("../../dist", import.meta.url));
 app.use("/*", serveStatic({ root: distPath }));
 app.get("/*", async (c, next) => {
   // Skip API routes

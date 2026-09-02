@@ -43,7 +43,7 @@ app.openapi(buzzWebhookRoute, async (c) => {
   const event = c.req.valid("json");
 
   if (isDuplicate(event.id)) {
-    return c.json({ ok: true, note: "duplicate" });
+    return c.json({ ok: true, note: "duplicate" }, 200);
   }
 
   if (config.BUZZ_VERIFY_SIGNATURES === "true" && !verifyNostrEvent(event)) {
@@ -60,7 +60,7 @@ app.openapi(buzzWebhookRoute, async (c) => {
   }
 
   await executeBuzzAction(agentId, action);
-  return c.json({ ok: true });
+  return c.json({ ok: true }, 200);
 });
 
 export default app;

@@ -58,8 +58,6 @@ npm run build
 cd ..
 ```
 
-The server build currently has `strict: false` and a few `// @ts-nocheck` pragmas in route/service files so it compiles cleanly. Hexagon should re-enable strict mode and remove those pragmas in a follow-up pass.
-
 ## 4. Environment variables
 
 Create `server/.env` (or export the variables another way). Example:
@@ -165,6 +163,46 @@ After reload:
 - Health check: `https://apps.10ktechnology.com/kanban/health`
 - API docs: `https://apps.10ktechnology.com/kanban/api/v1/docs`
 
+## Agent ingress endpoints
+
+Two authenticated endpoints are available for agents:
+
+### Generic agent actions
+`POST /kanban/api/v1/agent-actions`
+
+Bearer-token auth using a key from `AGENT_API_KEYS`. Supports:
+`create_task`, `close_task`, `reopen_task`, `comment`, `assign`, `attach_resource`.
+
+Example:
+```bash
+curl -X POST https://apps.10ktechnology.com/kanban/api/v1/agent-actions \
+  -H "Authorization: Bearer hex_yourKey" \
+  -H "Content-Type: application/json" \
+  -d '{"action":"create_task","payload":{"title":"From agent"}}'
+```
+
+### OpenClaw webhook
+`POST /kanban/api/v1/openclaw`
+
+Same auth and action vocabulary as `/agent-actions`, plus an optional `artifact` object that is automatically attached as a resource to the affected task.
+
+Example:
+```bash
+curl -X POST https://apps.10ktechnology.com/kanban/api/v1/openclaw \
+  -H "Authorization: Bearer oc_yourKey" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "action":"create_task",
+    "payload":{"title":"From OpenClaw"},
+    "artifact":{"id":"art_123","name":"output.md","url":"https://..."}
+  }'
+```
+
+### Buzz webhook
+`POST /kanban/api/v1/webhooks/buzz`
+
+Receives Nostr events. Set `BUZZ_SERVICE_PUBKEY` to the hex pubkey the service listens for, and `BUZZ_VERIFY_SIGNATURES=true` to validate event signatures.
+
 ## 8. Verify
 
 ```bash
@@ -194,8 +232,6 @@ sudo systemctl restart buzz-kanban
 
 ## Known temporary workarounds
 
-- `server/tsconfig.json` has `strict: false` to work around type mismatches in the Hono OpenAPI handlers and Drizzle insert types.
-- Several server source files have `// @ts-nocheck` at the top. These are flagged for Hexagon to clean up in a backend-polish pass.
 - The frontend is currently wired to sample data; the API client swap is the next integration step once the backend is running.
 
 ## Backup

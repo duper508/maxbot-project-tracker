@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { eq } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { boards } from "../db/schema.js";

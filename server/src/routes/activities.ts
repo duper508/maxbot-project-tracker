@@ -1,9 +1,8 @@
-// @ts-nocheck
 import { z, OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import { authMiddleware } from "../lib/auth.js";
 import type { Agent } from "../db/schema.js";
 import { listActivities } from "../services/activities.js";
-import { activitySchema, listResponse, errorSchema } from "./common.js";
+import { activitySchema, listResponse, errorSchema, activityToJson } from "./common.js";
 
 const app = new OpenAPIHono<{ Variables: { agent: Agent } }>();
 app.use("*", authMiddleware);
@@ -28,7 +27,7 @@ const listRoute = createRoute({
 app.openapi(listRoute, async (c) => {
   const query = c.req.valid("query");
   const result = await listActivities(query);
-  return c.json(result);
+  return c.json({ data: result.data.map(activityToJson), nextCursor: result.nextCursor }, 200);
 });
 
 export default app;

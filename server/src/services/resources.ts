@@ -1,8 +1,7 @@
-// @ts-nocheck
 import { eq, desc } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { resources } from "../db/schema.js";
-import type { Resource, NewResource } from "../db/schema.js";
+import type { Resource } from "../db/schema.js";
 import { generateId, now } from "../lib/id.js";
 import { createActivity } from "./activities.js";
 

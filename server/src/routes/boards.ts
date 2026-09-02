@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { z, OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import { authMiddleware, requireRole } from "../lib/auth.js";
 import type { Agent } from "../db/schema.js";
@@ -20,7 +19,7 @@ const listRoute = createRoute({
 
 app.openapi(listRoute, async (c) => {
   const data = await listBoards();
-  return c.json(data.map(boardToJson));
+  return c.json(data.map(boardToJson), 200);
 });
 
 const getRoute = createRoute({
@@ -36,9 +35,9 @@ const getRoute = createRoute({
 });
 
 app.openapi(getRoute, async (c) => {
-  const { id } = c.req.valid("params");
+  const { id } = c.req.valid("param");
   const board = await getBoard(id);
-  return c.json(boardToJson(board));
+  return c.json(boardToJson(board), 200);
 });
 
 const createRouteDef = createRoute({
@@ -98,10 +97,10 @@ const updateRoute = createRoute({
 
 app.openapi(updateRoute, async (c) => {
   requireRole(c.get("agent"), ["owner", "editor"]);
-  const { id } = c.req.valid("params");
+  const { id } = c.req.valid("param");
   const body = c.req.valid("json");
   const board = await updateBoard(id, body);
-  return c.json(boardToJson(board));
+  return c.json(boardToJson(board), 200);
 });
 
 const deleteRoute = createRoute({
@@ -118,7 +117,7 @@ const deleteRoute = createRoute({
 
 app.openapi(deleteRoute, async (c) => {
   requireRole(c.get("agent"), ["owner"]);
-  const { id } = c.req.valid("params");
+  const { id } = c.req.valid("param");
   await deleteBoard(id);
   return c.body(null, 204);
 });

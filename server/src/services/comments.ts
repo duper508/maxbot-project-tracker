@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { eq, desc } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { comments } from "../db/schema.js";

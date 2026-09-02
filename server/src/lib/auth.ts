@@ -1,4 +1,4 @@
-import { compareSync, hashSync } from "bcryptjs";
+import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { createMiddleware } from "hono/factory";
 import { deleteCookie, getCookie } from "hono/cookie";
@@ -19,19 +19,19 @@ export interface SessionPayload {
 const secretBytes = new TextEncoder().encode(config.SESSION_SECRET);
 
 export function hashPassword(password: string): string {
-  return hashSync(password, 10);
+  return bcrypt.hashSync(password, 10);
 }
 
 export function verifyPassword(password: string, hash: string): boolean {
-  return compareSync(password, hash);
+  return bcrypt.compareSync(password, hash);
 }
 
 export function hashApiKey(key: string): string {
-  return hashSync(key, 10);
+  return bcrypt.hashSync(key, 10);
 }
 
 export function verifyApiKey(key: string, hash: string): boolean {
-  return compareSync(key, hash);
+  return bcrypt.compareSync(key, hash);
 }
 
 export async function signSession(payload: SessionPayload): Promise<string> {

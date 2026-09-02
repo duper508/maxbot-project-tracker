@@ -1,8 +1,7 @@
-// @ts-nocheck
 import { eq, and } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { agents, apiKeys } from "../db/schema.js";
-import type { Agent, NewAgent, ApiKey } from "../db/schema.js";
+import type { Agent, ApiKey } from "../db/schema.js";
 import { generateId, now } from "../lib/id.js";
 import { hashApiKey } from "../lib/auth.js";
 import { notFound, badRequest } from "../lib/errors.js";

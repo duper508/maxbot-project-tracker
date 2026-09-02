@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { z, OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import { setCookie, deleteCookie } from "hono/cookie";
 import { eq } from "drizzle-orm";
@@ -52,7 +51,7 @@ app.openapi(loginRoute, async (c) => {
     path: "/",
     maxAge: 60 * 60 * 24 * 7,
   });
-  return c.json({ ok: true });
+  return c.json({ ok: true }, 200);
 });
 
 const logoutRoute = createRoute({
@@ -66,7 +65,7 @@ const logoutRoute = createRoute({
 
 app.openapi(logoutRoute, (c) => {
   deleteCookie(c, SESSION_COOKIE, { path: "/" });
-  return c.json({ ok: true });
+  return c.json({ ok: true }, 200);
 });
 
 export default app;
