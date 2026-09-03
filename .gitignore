@@ -13,6 +13,14 @@ dist-ssr
 *.local
 .scratch
 
+# Environment / secrets
+.env
+server/.env
+
+# SQLite databases (dev runtime state)
+server/data/*.db
+server/data/*.db-*
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

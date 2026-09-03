@@ -230,10 +230,6 @@ cd server && npm run build && cd ..
 sudo systemctl restart buzz-kanban
 ```
 
-## Known temporary workarounds
-
-- The frontend is currently wired to sample data; the API client swap is the next integration step once the backend is running.
-
 ## Backup
 
 The only state is the SQLite file. Back it up regularly:
