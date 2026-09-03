@@ -11,7 +11,88 @@ A single Buzz Kanban service that serves:
 
 The Caddy reverse proxy on the VPS strips the `/kanban` prefix, so the app sees requests as `/` and `/api/v1/*`.
 
-## Prerequisites
+## Docker deployment (recommended)
+
+### 1. Clone / pull the repo
+
+```bash
+cd /opt  # or your preferred deploy root
+git clone https://github.com/duper508/maxbot-project-tracker.git buzz-kanban
+cd buzz-kanban
+git checkout rebuild/buzz-kanban-backend  # current deploy branch
+```
+
+### 2. Configure environment variables
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and set the required values:
+
+- `SESSION_SECRET` — must be at least 32 characters
+- `OWNER_TOKEN` — pre-shared token humans use at `POST /api/v1/auth/login`
+- `AGENT_API_KEYS` — optional, format `role:Name:key`
+- `BUZZ_RELAY_URL`, `BUZZ_SERVICE_PUBKEY` — optional Buzz webhook integration
+
+`.env` is gitignored, so it will not be committed.
+
+### 3. Build and start with Docker Compose
+
+```bash
+docker compose up -d --build
+```
+
+This builds the image, starts the container, and persists the SQLite database in a Docker volume named `kanban-data`.
+
+The service listens on `http://0.0.0.0:8380`.
+
+### 4. Verify
+
+```bash
+# Health check
+curl http://localhost:8380/health
+
+# Login (replace OWNER_TOKEN)
+curl -c cookies.txt -X POST http://localhost:8380/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"token":"YOUR_OWNER_TOKEN"}'
+
+# List boards
+curl -b cookies.txt http://localhost:8380/api/v1/boards
+```
+
+### 5. Updating
+
+```bash
+cd /opt/buzz-kanban
+git pull origin rebuild/buzz-kanban-backend
+docker compose up -d --build
+```
+
+### 6. Caddy configuration
+
+If you want the app available at `https://apps.10ktechnology.com/kanban`, add this block to your Caddyfile:
+
+```caddy
+apps.10ktechnology.com {
+    # ... existing sub-sites ...
+
+    handle_path /kanban/* {
+        reverse_proxy localhost:8380
+    }
+}
+```
+
+Then reload Caddy.
+
+After reload:
+- UI: `https://apps.10ktechnology.com/kanban`
+- API base: `https://apps.10ktechnology.com/kanban/api/v1`
+- Health check: `https://apps.10ktechnology.com/kanban/health`
+- API docs: `https://apps.10ktechnology.com/kanban/api/v1/docs`
+
+## Manual deployment
 
 - Node.js 22+ and npm
 - Git access to `https://github.com/duper508/maxbot-project-tracker.git`

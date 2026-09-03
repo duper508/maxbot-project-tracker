@@ -1,0 +1,35 @@
+# Dependencies
+node_modules
+server/node_modules
+
+# Build outputs
+dist
+server/dist
+
+# Runtime state
+server/data
+*.db
+*.db-*
+
+# Environment / secrets
+.env
+server/.env
+.env.*
+!.env.example
+
+# Git
+.git
+.gitignore
+
+# Editor / OS
+.vscode
+.idea
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+
+# Scratch / temp
+.scratch
+*.local
