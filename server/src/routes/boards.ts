@@ -2,7 +2,21 @@ import { z, OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import { authMiddleware, requireRole } from "../lib/auth.js";
 import type { Agent } from "../db/schema.js";
 import { listBoards, getBoard, createBoard, updateBoard, deleteBoard, boardToJson } from "../services/boards.js";
+import { listTasks } from "../services/tasks.js";
 import { boardSchema, boardColumnSchema, errorSchema, idParamSchema } from "./common.js";
+
+function groupTaskIdsByStatus(tasks: { id: string; status: string }[]): Record<string, string[]> {
+  const map: Record<string, string[]> = {};
+  for (const t of tasks) {
+    (map[t.status] ??= []).push(t.id);
+  }
+  return map;
+}
+
+async function taskIdsByColumnForBoard(boardId: string): Promise<Record<string, string[]>> {
+  const { data } = await listTasks({ boardId });
+  return groupTaskIdsByStatus(data);
+}
 
 const app = new OpenAPIHono<{ Variables: { agent: Agent } }>();
 app.use("*", authMiddleware);
@@ -19,7 +33,10 @@ const listRoute = createRoute({
 
 app.openapi(listRoute, async (c) => {
   const data = await listBoards();
-  return c.json(data.map(boardToJson), 200);
+  const taskIdsByBoard = await Promise.all(
+    data.map((b) => taskIdsByColumnForBoard(b.id))
+  );
+  return c.json(data.map((b, i) => boardToJson(b, taskIdsByBoard[i])), 200);
 });
 
 const getRoute = createRoute({
@@ -37,7 +54,8 @@ const getRoute = createRoute({
 app.openapi(getRoute, async (c) => {
   const { id } = c.req.valid("param");
   const board = await getBoard(id);
-  return c.json(boardToJson(board), 200);
+  const taskIdsByColumn = await taskIdsByColumnForBoard(id);
+  return c.json(boardToJson(board, taskIdsByColumn), 200);
 });
 
 const createRouteDef = createRoute({
@@ -100,7 +118,8 @@ app.openapi(updateRoute, async (c) => {
   const { id } = c.req.valid("param");
   const body = c.req.valid("json");
   const board = await updateBoard(id, body);
-  return c.json(boardToJson(board), 200);
+  const taskIdsByColumn = await taskIdsByColumnForBoard(id);
+  return c.json(boardToJson(board, taskIdsByColumn), 200);
 });
 
 const deleteRoute = createRoute({

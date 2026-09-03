@@ -93,10 +93,10 @@ export async function deleteBoard(id: string): Promise<void> {
   await db.delete(boards).where(eq(boards.id, id));
 }
 
-export function boardToJson(board: Board) {
+export function boardToJson(board: Board, taskIdsByColumn: Record<string, string[]> = {}) {
   const columns = (board.columns as BoardColumnInput[]).map((col) => ({
     ...col,
-    taskIds: [],
+    taskIds: taskIdsByColumn[col.id] ?? [],
   }));
   return {
     id: board.id,
