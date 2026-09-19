@@ -69,14 +69,16 @@ the `settings` table editable from **Settings → Integrations**.
 
 ## 2. First-run setup
 
-Boot with zero human principals puts the server in **setup mode**:
+Booting with no human principal that holds a `passwordHash` puts the server in
+**setup mode** — §2.2 defines that `unclaimed` condition precisely and covers the
+migrated case, where a principal row already exists:
 
-- Every route except `/health` and `/api/v1/setup/*` returns `409 SETUP_REQUIRED`.
+- Every route except `/health` and the active activation endpoint (`/api/v1/setup/*`
+  or `/api/v1/auth/claim*`, per §2.2) returns `409 SETUP_REQUIRED`.
 - The SPA sees that code and routes to `/setup`.
 - A one-time **setup token** (32 hex) is generated in memory and printed to the
-  container log on each boot while the instance is **unclaimed** — see §2.2 for what
-  that means precisely; it covers both first-run setup and a migrated instance whose
-  claim is still pending. `POST /api/v1/setup` requires it. This closes the window
+  container log on each boot while the instance is **unclaimed**.
+  `POST /api/v1/setup` requires it. This closes the window
   where whoever reaches the URL first can claim the instance — the claimant must be
   able to read `docker compose logs`.
 - **The token expires 60 minutes after boot.** Printing it is the one deliberate
@@ -94,15 +96,16 @@ Boot with zero human principals puts the server in **setup mode**:
   Valid for 60 minutes. Treat it as a password, not a log line.
   ============================================================
   ```
-- The "zero human principals" check and the owner `INSERT` happen in **one
-  transaction**. Check-then-create leaves a window where two concurrent
-  `POST /api/v1/setup` calls both pass the check and both mint an owner.
+- The `unclaimed` check and the owner write happen in **one transaction**.
+  Check-then-write leaves a window where two concurrent `POST /api/v1/setup` calls
+  both pass the check and both mint an owner.
 
 ```
 POST /api/v1/setup
   { setupToken, email, displayName, password }
-  -> creates the first principal (kind=human, role=owner)
-  -> creates the default board
+  -> adopts the existing unclaimed human principal if there is one (§2.2),
+     otherwise creates it (kind=human, role=owner)
+  -> creates the default board if none exists
   -> sets the session cookie
   -> setup mode ends permanently
 ```
@@ -129,9 +132,11 @@ not lock the owner out:
    standing value-upgrade on a credential of unknown strength: a stolen
    `OWNER_TOKEN` buys a 7-day session today, but during an unbounded claim window it
    buys a *permanent account* that outlives the token's retirement. After expiry the
-   path returns `410 CLAIM_EXPIRED`, and re-enabling it is a documented shell
-   command (`docker compose exec app node scripts/reopen-claim.js`) — which puts it
-   back on exactly the footing first-boot setup already has.
+   path returns `410 CLAIM_EXPIRED` and the instance falls back to setup-pending
+   (§2.2), so `POST /api/v1/setup` — setup token only, adopting the existing owner
+   row — becomes the route in. That puts it back on exactly the footing first-boot
+   setup already has, which is the point of the expiry: it retires `OWNER_TOKEN` as
+   a factor without stranding the owner. No recovery script is required.
 4. **The intermediate state is a scoped claim ticket, not a session.** Presenting
    both tokens returns a short-lived (10 min) ticket with `scope=claim`, and the
    only endpoint that accepts it is `POST /api/v1/auth/claim/complete`. If that
@@ -174,38 +179,53 @@ the one you close yourself.
 
 ### 2.2 When the setup token prints
 
-Two distinct states need the boot token, and §2's "setup mode" named only the first.
-An instance is **unclaimed** while either of these holds:
+**An instance is `unclaimed` while no human principal holds a `passwordHash`.**
 
-| State | Condition | What the token unlocks |
-|-------|-----------|------------------------|
-| setup-pending | zero human principals | `POST /api/v1/setup` |
-| claim-pending | a human principal exists with a null `passwordHash`, and `auth.legacyTokenDisabled` is unset | `POST /api/v1/auth/claim` |
+That is the whole definition, and it is deliberately the same condition that ends
+`unclaimed` — a `passwordHash` written onto a human principal. It does not test
+"zero human principals," because that test is wrong for every migrated deploy:
+`seedDatabase` inserts the legacy `Owner` row whenever no `role='owner'` row exists
+(`server/src/services/seed.ts:11-23`), with no `OWNER_TOKEN` guard, so the row is
+there from the first boot after migration regardless of how v1 was configured.
 
-A fresh deploy is setup-pending. A migrated deploy is **claim-pending, not
-setup-pending** — the legacy `Owner` row already exists, so the zero-principals test
-is false from the first boot after migration.
+**The setup token prints on every boot while the instance is unclaimed, and stops
+printing on the first boot after.** The 60-minute expiry and the warning banner
+apply unchanged.
 
-**The setup token prints on every boot while the instance is unclaimed, in either
-state, and stops printing on the first boot after it is claimed.** The 60-minute
-expiry and the warning banner apply identically in both. Completing setup or
-completing a claim both write a `passwordHash` onto a human principal, which is the
-single condition that ends `unclaimed`.
+While unclaimed, the server offers exactly **one** activation path, chosen by
+whether the §2.1 claim path is live:
 
-One interaction with §2.1.3: once the 7-day claim expiry has passed, the instance is
-still claim-pending but `POST /api/v1/auth/claim` returns `410 CLAIM_EXPIRED`, so a
-printed token unlocks nothing. In that state the server prints the pointer instead
-of a live credential:
+| Condition | State | Activation |
+|-----------|-------|------------|
+| `OWNER_TOKEN` set, claim not expired, `auth.legacyTokenDisabled` unset | claim-pending | `POST /api/v1/auth/claim` — setup token **and** owner token (§2.1.2) |
+| otherwise | setup-pending | `POST /api/v1/setup` — setup token only |
 
-```
-============================================================
-CLAIM EXPIRED. No setup token issued.
-Run: docker compose exec app node scripts/reopen-claim.js
-============================================================
-```
+The two are mutually exclusive by construction, and **claim takes precedence
+whenever it is live**. That ordering is load-bearing: if `/setup` stayed reachable
+during a live claim window, anyone holding the setup token could bypass §2.1.2's
+two-factor requirement by calling `/setup` instead of `/auth/claim`.
 
-*(Ambiguity raised by Guard at sign-off — the original text left it to be inferred
-from a runbook `grep`.)*
+**`/setup` adopts an existing unclaimed principal rather than inserting a second
+one.** If exactly one human principal exists with a null `passwordHash`, setup
+writes the email, display name and password onto *that row*, preserving its `id` —
+so every existing `createdBy`, `assigneeId` and `activities.actorId` reference stays
+intact. It inserts a new owner only when no such row exists.
+
+This closes the dead-end Guard found at sign-off. `OWNER_TOKEN` is optional in v1
+(`server/src/config.ts:10`, `z.string().optional()`) while the `Owner` row is seeded
+unconditionally, so a v1 deploy that never set the token migrates into an instance
+with an unclaimed human principal and no claim path. Under a naive reading it would
+print a live bearer token every boot that unlocks nothing, with no route to a first
+password at all. Under the table above it is simply setup-pending: the owner reads
+the token out of the log and runs `/setup`, which adopts the orphaned row.
+
+The same fallback covers §2.1.3. After the 7-day claim expiry the claim path is no
+longer live, so the instance becomes setup-pending and `/setup` is the route — which
+is precisely what §2.1.3 already promised, that expiry "puts it back on exactly the
+footing first-boot setup already has." No separate recovery script is needed, and
+none is specified.
+
+*(Both gaps raised by Guard — the first at sign-off, the second on re-verification.)*
 
 ## 3. Data model changes
 
@@ -458,9 +478,10 @@ From the security review, A1 also carries: fail-closed `APP_SECRET` validation,
 setup-token expiry and warning banner, transactional setup and claim, the scoped
 `scope=claim` ticket, `timingSafeEqual` on both legacy tokens, per-IP login
 throttling with a short auto-expiring account lockout, `role` and `status` read live
-from the principal row rather than the JWT, and `scripts/reopen-claim.js` for the
-expired-claim path. Rate limiting does not exist anywhere in `server.ts` today, so
-the middleware itself is new work.
+from the principal row rather than the JWT, and the §2.2 `unclaimed` state machine —
+including `/setup` adopting an existing unclaimed principal, and the claim-over-setup
+precedence that keeps §2.1.2's two factors from being bypassed. Rate limiting does
+not exist anywhere in `server.ts` today, so the middleware itself is new work.
 
 Migration is executed against a backup copy first, verified with
 `PRAGMA foreign_key_check` and a `.schema` inspection, with copy-and-swap as the
@@ -497,6 +518,11 @@ A1 and A2 PRs against section 6.
    rather than at token expiry.
 8. The one-time legacy `OWNER_TOKEN` claim path expires 7 days after migration and
    issues a scoped claim ticket, never a session.
+9. An instance is `unclaimed` while no human principal holds a `passwordHash`, and
+   exactly one activation path is live at a time: the legacy claim while it is
+   enabled, `/setup` otherwise. `/setup` adopts an existing unclaimed principal
+   instead of minting a second owner, so an absent or expired claim path never
+   strands the owner and no recovery script is needed.
 
 ## 8a. Review history
 
@@ -511,6 +537,12 @@ A1 and A2 PRs against section 6.
   lockout DoS and the explicit no-CORS decision (6), short-secret previews (3.3),
   `login_failed` payload (3.4). Full text:
   `docs/reviews/2026-09-19-security-review-guard.md`.
+- **Guard** (sign-off re-verification, 2026-09-19) — two further gaps in the boot
+  token's state machine, both folded into 2.2: "setup mode" never fired for a
+  migrated instance, and a v1 deploy that never set `OWNER_TOKEN` migrated into a
+  state with no activation path at all. The fix replaced the two-state model with a
+  single `unclaimed` condition plus adoption in `/setup`, which also retired the
+  `reopen-claim.js` recovery script the earlier draft specified.
 
 ## 9. Open questions for the owner
 
