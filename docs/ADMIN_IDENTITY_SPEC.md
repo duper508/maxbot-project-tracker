@@ -213,10 +213,26 @@ learns only that this instance activates through claim rather than setup, which 
 would discover by trying either endpoint regardless.
 
 **`/setup` adopts an existing unclaimed principal rather than inserting a second
-one.** If exactly one human principal exists with a null `passwordHash`, setup
-writes the email, display name and password onto *that row*, preserving its `id` —
-so every existing `createdBy`, `assigneeId` and `activities.actorId` reference stays
-intact. It inserts a new owner only when no such row exists.
+one.** Adoption is defined over the count of human principals holding a null
+`passwordHash`:
+
+| Null-hash human principals | `/setup` behaviour |
+|---|---|
+| 0 | Insert a new owner |
+| 1 | **Adopt** — write email, display name and password onto *that row*, preserving its `id` |
+| >1 | **Fail closed.** `500 ADOPTION_AMBIGUOUS`, no write, loud log naming every candidate row |
+
+Adoption preserves the `id` so every existing `createdBy`, `assigneeId` and
+`activities.actorId` reference stays intact — that is the entire point of adopting
+rather than inserting, and an implementation that mints a fresh `id` silently
+detaches the live board's history.
+
+The `>1` row is unreachable today: `seedDatabase` guarantees a single owner row and
+no human principal can be created before auth exists. It is specified anyway because
+an invite flow that creates a human before their first password — §9's SMTP question
+leads straight there — would make it reachable, and at that point picking one
+candidate arbitrarily means adopting the wrong row. Failing closed is recoverable;
+an arbitrary adoption is not.
 
 This closes the dead-end Guard found at sign-off. `OWNER_TOKEN` is optional in v1
 (`server/src/config.ts:10`, `z.string().optional()`) while the `Owner` row is seeded
@@ -232,7 +248,8 @@ is precisely what §2.1.3 already promised, that expiry "puts it back on exactly
 footing first-boot setup already has." No separate recovery script is needed, and
 none is specified.
 
-*(Both gaps raised by Guard — the first at sign-off, the second on re-verification.)*
+*(All three gaps raised by Guard — at sign-off, on re-verification, and on the
+re-verification after that.)*
 
 ## 3. Data model changes
 
@@ -550,6 +567,12 @@ A1 and A2 PRs against section 6.
   state with no activation path at all. The fix replaced the two-state model with a
   single `unclaimed` condition plus adoption in `/setup`, which also retired the
   `reopen-claim.js` recovery script the earlier draft specified.
+- **Guard** (second re-verification, 2026-09-19) — accepted the `reopen-claim.js`
+  reversal on the record, naming the trade it makes: post-expiry activation drops
+  from two factors to one (setup token, i.e. log access). Acceptable because that is
+  the posture every fresh deploy already has, and because the alternative kept both
+  shell-dependent recovery and an unknown-entropy `OWNER_TOKEN` alive indefinitely.
+  Raised the unspecified `>1` adoption case, now a fail-closed row in 2.2.
 
 ## 9. Open questions for the owner
 
