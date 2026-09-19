@@ -205,6 +205,13 @@ whenever it is live**. That ordering is load-bearing: if `/setup` stayed reachab
 during a live claim window, anyone holding the setup token could bypass §2.1.2's
 two-factor requirement by calling `/setup` instead of `/auth/claim`.
 
+While the claim path is live, `POST /api/v1/setup` returns **`409 CLAIM_REQUIRED`**
+— parallel to the `409 SETUP_REQUIRED` the rest of the API returns while unclaimed,
+and directive enough for the SPA to route to the claim flow on seeing it. The code
+carries no detail about *why* the claim path is live; an unauthenticated caller
+learns only that this instance activates through claim rather than setup, which it
+would discover by trying either endpoint regardless.
+
 **`/setup` adopts an existing unclaimed principal rather than inserting a second
 one.** If exactly one human principal exists with a null `passwordHash`, setup
 writes the email, display name and password onto *that row*, preserving its `id` —
