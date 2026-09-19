@@ -3,6 +3,13 @@
 **Reviewer:** Guard · **Basis:** spec at commit `7434276` (PR #6), current code at `c113382` on `rebuild/buzz-kanban-backend`
 **Type:** design-level review; no implementation exists yet. CONFIRMED = verified in the spec text or current code. PLAUSIBLE = reasoned, not reproduced.
 
+> **Erratum (Guard, at sign-off).** The non-constant-time compare cited below as
+> `server/src/routes/auth.ts:41` is the call site. The `===` itself is at
+> `server/src/lib/auth.ts:57`, inside `verifyOwnerToken`, reached from
+> `routes/auth.ts:37`. The finding stands; only the line reference was off. This
+> copy is kept verbatim as reviewed — implementers should use the corrected
+> citation.
+
 **Verdict: sound architecture — ship it after the fixes below.** v2 is a large net improvement over what is deployed: the current login is a non-constant-time token compare (`server/src/routes/auth.ts:41`, `token === config.OWNER_TOKEN`), there is no rate limiting anywhere in `server.ts`, every API request runs an O(n) bcrypt scan, and administration requires shell access. v2 fixes all four.
 
 ## Fizz's five questions

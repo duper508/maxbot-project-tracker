@@ -74,15 +74,17 @@ Boot with zero human principals puts the server in **setup mode**:
 - Every route except `/health` and `/api/v1/setup/*` returns `409 SETUP_REQUIRED`.
 - The SPA sees that code and routes to `/setup`.
 - A one-time **setup token** (32 hex) is generated in memory and printed to the
-  container log on each boot while setup is pending. `POST /api/v1/setup` requires
-  it. This closes the window where whoever reaches the URL first can claim the
-  instance — the claimant must be able to read `docker compose logs`.
+  container log on each boot while the instance is **unclaimed** — see §2.2 for what
+  that means precisely; it covers both first-run setup and a migrated instance whose
+  claim is still pending. `POST /api/v1/setup` requires it. This closes the window
+  where whoever reaches the URL first can claim the instance — the claimant must be
+  able to read `docker compose logs`.
 - **The token expires 60 minutes after boot.** Printing it is the one deliberate
   exception to section 6's "no secret in any log line", and a log line is not
   transient: it rotates to a file, is readable by anyone in the `docker` group or
   holding a Portainer session, and is scraped by any shipper pointed at the host.
-  Bounding the lifetime bounds that exposure. If setup is still pending after an
-  hour, `docker compose restart` issues a fresh token.
+  Bounding the lifetime bounds that exposure. If the instance is still unclaimed
+  after an hour, `docker compose restart` issues a fresh token.
 - It is printed with an explicit warning so nobody reads it as a boot banner:
 
   ```
@@ -169,6 +171,41 @@ sed -i '/^OWNER_TOKEN=/d' .env                 # server ignores it; don't leave 
 
 Claim immediately after the migration. The window is real; the shortest window is
 the one you close yourself.
+
+### 2.2 When the setup token prints
+
+Two distinct states need the boot token, and §2's "setup mode" named only the first.
+An instance is **unclaimed** while either of these holds:
+
+| State | Condition | What the token unlocks |
+|-------|-----------|------------------------|
+| setup-pending | zero human principals | `POST /api/v1/setup` |
+| claim-pending | a human principal exists with a null `passwordHash`, and `auth.legacyTokenDisabled` is unset | `POST /api/v1/auth/claim` |
+
+A fresh deploy is setup-pending. A migrated deploy is **claim-pending, not
+setup-pending** — the legacy `Owner` row already exists, so the zero-principals test
+is false from the first boot after migration.
+
+**The setup token prints on every boot while the instance is unclaimed, in either
+state, and stops printing on the first boot after it is claimed.** The 60-minute
+expiry and the warning banner apply identically in both. Completing setup or
+completing a claim both write a `passwordHash` onto a human principal, which is the
+single condition that ends `unclaimed`.
+
+One interaction with §2.1.3: once the 7-day claim expiry has passed, the instance is
+still claim-pending but `POST /api/v1/auth/claim` returns `410 CLAIM_EXPIRED`, so a
+printed token unlocks nothing. In that state the server prints the pointer instead
+of a live credential:
+
+```
+============================================================
+CLAIM EXPIRED. No setup token issued.
+Run: docker compose exec app node scripts/reopen-claim.js
+============================================================
+```
+
+*(Ambiguity raised by Guard at sign-off — the original text left it to be inferred
+from a runbook `grep`.)*
 
 ## 3. Data model changes
 
