@@ -49,6 +49,19 @@ over the settings-encryption key:
 | session key | `kanban/session-v1` | HS256 signing of session JWTs |
 | data key | `kanban/settings-v1` | AES-256-GCM for secret settings at rest |
 
+`APP_SECRET` has **no default and no fallback**: the process refuses to boot
+without it. Today `SESSION_SECRET` ships a working default —
+`change-me-in-production-32-char-min`, `server/src/config.ts:8` — so an instance can
+run in production on a signing key that is public in the repo. v2 fails closed.
+
+Anything sealed under the data key stores a **key-version marker** (`v1`) in its
+envelope, so a future `APP_SECRET` rotation can decrypt-old / encrypt-new instead of
+being a flag day.
+
+> **Runbook warning.** A database backup taken without `APP_SECRET` cannot recover
+> any secret setting. Back the secret up separately from the DB, or a restore comes
+> back with an unreadable settings table.
+
 **Removed from `.env` entirely:** `OWNER_TOKEN`, `AGENT_API_KEYS`, `SESSION_SECRET`,
 `JWT_EXPIRY`, `BUZZ_RELAY_URL`, `BUZZ_SERVICE_PUBKEY`, `BUZZ_VERIFY_SIGNATURES`.
 Each of these becomes either a real credential (principals / API keys) or a row in
@@ -64,6 +77,24 @@ Boot with zero human principals puts the server in **setup mode**:
   container log on each boot while setup is pending. `POST /api/v1/setup` requires
   it. This closes the window where whoever reaches the URL first can claim the
   instance — the claimant must be able to read `docker compose logs`.
+- **The token expires 60 minutes after boot.** Printing it is the one deliberate
+  exception to section 6's "no secret in any log line", and a log line is not
+  transient: it rotates to a file, is readable by anyone in the `docker` group or
+  holding a Portainer session, and is scraped by any shipper pointed at the host.
+  Bounding the lifetime bounds that exposure. If setup is still pending after an
+  hour, `docker compose restart` issues a fresh token.
+- It is printed with an explicit warning so nobody reads it as a boot banner:
+
+  ```
+  ============================================================
+  SETUP TOKEN: <32 hex>
+  This token grants full ownership of this instance.
+  Valid for 60 minutes. Treat it as a password, not a log line.
+  ============================================================
+  ```
+- The "zero human principals" check and the owner `INSERT` happen in **one
+  transaction**. Check-then-create leaves a window where two concurrent
+  `POST /api/v1/setup` calls both pass the check and both mint an owner.
 
 ```
 POST /api/v1/setup
@@ -92,19 +123,52 @@ not lock the owner out:
    owner. Requiring both raises the bar to "`.env` access **and** log access",
    which is exactly the bar first-boot setup already sets. *(Raised by Hexagon in
    review; the single-factor version was the weakest point in the draft.)*
-3. On completion the server writes `settings['auth.legacyTokenDisabled'] = true`
+3. **The claim path expires 7 days after the migration runs.** Left open, it is a
+   standing value-upgrade on a credential of unknown strength: a stolen
+   `OWNER_TOKEN` buys a 7-day session today, but during an unbounded claim window it
+   buys a *permanent account* that outlives the token's retirement. After expiry the
+   path returns `410 CLAIM_EXPIRED`, and re-enabling it is a documented shell
+   command (`docker compose exec app node scripts/reopen-claim.js`) — which puts it
+   back on exactly the footing first-boot setup already has.
+4. **The intermediate state is a scoped claim ticket, not a session.** Presenting
+   both tokens returns a short-lived (10 min) ticket with `scope=claim`, and the
+   only endpoint that accepts it is `POST /api/v1/auth/claim/complete`. If that
+   state were a real session, "forces you to set a password" would be a UI
+   convention and the whole API would be open to any caller holding `OWNER_TOKEN`.
+5. Both tokens are compared with `crypto.timingSafeEqual` over their hashes, never
+   `===`. The live code does `token === config.OWNER_TOKEN`
+   (`server/src/lib/auth.ts:57`), and the legacy token was hand-created, so its
+   entropy is unknown and a byte-wise leak is worth more against it than it would be
+   against a CSPRNG value. Both claim endpoints are rate-limited (section 6).
+6. The exactly-once transition — validate, create the principal, set
+   `auth.legacyTokenDisabled` — is **one transaction**, for the same reason as
+   section 2.
+7. On completion the server writes `settings['auth.legacyTokenDisabled'] = true`
    and never honours `OWNER_TOKEN` again, present in env or not.
-4. `AGENT_API_KEYS`, if present, is imported once into `api_keys` (prefix + SHA-256
+8. `AGENT_API_KEYS`, if present, is imported once into `api_keys` (prefix + SHA-256
    of the existing raw key) so no running agent breaks, then ignored forever. The
    importer **skips and warns** on entries whose key still matches a `.env.example`
    placeholder (`oc_xxx`, `hex_xxx`, and similar) rather than minting them as live
-   credentials.
+   credentials. Every existing `api_keys` row traces back to env seeding — v1 has no
+   key-creation endpoint — so a key since removed from `.env` leaves a bcrypt row
+   that **cannot** be migrated. The importer logs each such row loudly, by name and
+   principal, rather than leaving a silently dead credential for an agent to
+   discover at 3am.
 
-Mandatory runbook step before upgrading:
+Mandatory runbook steps:
 
 ```bash
+# before upgrading
 cp data/kanban.db "data/kanban.db.$(date +%F).bak"
+
+# after upgrading: claim immediately, then retire the token by hand
+docker compose logs app | grep 'SETUP TOKEN'   # the second factor for the claim
+# ...complete the claim in the UI...
+sed -i '/^OWNER_TOKEN=/d' .env                 # server ignores it; don't leave it lying around
 ```
+
+Claim immediately after the migration. The window is real; the shortest window is
+the one you close yourself.
 
 ## 3. Data model changes
 
@@ -129,6 +193,7 @@ lastLoginAt        integer
 failedLoginCount   integer not null default 0
 lockedUntil        integer
 passwordChangedAt  integer
+mustChangePassword integer not null default 0   -- forces the claim flow on next login
 updatedAt          integer
 ```
 
@@ -195,6 +260,11 @@ metadata, never plaintext:
   "preview": "****1a2b", "updatedAt": 1758278400000 }
 ```
 
+`valueEncrypted` is `version || iv || ciphertext || tag` — see the key-version
+marker in section 1. The `preview` is the last four characters **only when the
+plaintext is 12 characters or longer**; below that, revealing a third of a short
+secret is worse than showing nothing, and the field is omitted.
+
 There is no endpoint, anywhere, that returns a stored secret's plaintext. The UI
 renders a write-only field; re-entering a value replaces it.
 
@@ -219,7 +289,10 @@ targetId    text
 `login_failed`, `password_changed`.
 
 **A secret value never enters `payload`.** For `setting_updated` the payload is
-`{ key, isSecret: true }` and nothing more.
+`{ key, isSecret: true }` and nothing more. For `login_failed` it is the attempted
+**email and nothing else** — never the submitted password, not a prefix of it, not
+its length. People type passwords into the email field, so even that value is
+treated as possibly-sensitive and is never echoed back in an error.
 
 ## 4. API surface
 
@@ -232,11 +305,28 @@ POST   /api/v1/auth/logout
 GET    /api/v1/auth/me                  -- current principal + role  (NEW — the UI
                                            has no way to ask this today)
 POST   /api/v1/auth/change-password     -- { currentPassword, newPassword }
+POST   /api/v1/auth/claim               -- { ownerToken, setupToken } -> claim ticket
+POST   /api/v1/auth/claim/complete      -- { ticket, email, displayName, password }
 ```
 
-Session JWTs carry `{ principalId, role, pwv }` where `pwv` is `passwordChangedAt`
-in ms. `verifySession` rejects a token whose `pwv` does not match the stored value,
-so changing a password invalidates every existing session with no session table.
+Session JWTs carry **`{ principalId, pwv }` and nothing else.** `pwv` is
+`passwordChangedAt` in ms; `verifySession` rejects a token whose `pwv` does not
+match the stored value, so changing a password invalidates every existing session
+with no session table.
+
+**`role` is deliberately not in the token.** Section 3.2 already reads an API key's
+role live from its principal; a session deserves the same treatment for the same
+reason. A role baked into a 7-day JWT means a demoted or disabled owner keeps full
+rights for up to a week after you revoke them — precisely the moment you most need
+the revocation to bite. The middleware loads the principal row on every request
+regardless, so reading `role` and `status` from that row costs nothing and makes
+`status = 'disabled'` take effect on the very next request.
+
+`mustChangePassword` is checked on login: a principal carrying it receives the same
+scoped ticket as the claim path (`scope=claim`, 10 min) instead of a session, so a
+temp password can never become a working long-term credential. Without it, the owner
+retains a valid login for every human they invite, and the audit log cannot tell the
+two of them apart.
 
 ### Principals — owner only
 
@@ -307,10 +397,12 @@ Hiding is presentation only; the server enforces every gate independently.
 |------|-------------|
 | Passwords | bcrypt cost 12; min 12 chars; checked against a small common-password deny list |
 | API keys | 160-bit CSPRNG secret; SHA-256 at rest; constant-time compare; O(1) lookup by prefix |
-| Secret exposure | No secret in any GET response, log line, error message, or audit payload |
-| Login | Generic `Invalid email or password` — no user enumeration. 5 failures per account per 15 min sets `lockedUntil`. Per-IP throttle on top |
-| Rate limits | `/auth/login`, `/setup`, and key creation |
-| CSRF | Same-origin SPA with `SameSite=Lax` cookie, plus an `Origin` / `Sec-Fetch-Site` check on every state-changing request |
+| Secret exposure | No secret in any GET response, error message, or audit payload. **One exception, by design:** the boot setup token is printed to the container log (section 2), bounded by a 60-minute expiry. No other secret is ever logged |
+| Login | Generic `Invalid email or password` — no user enumeration. **Per-IP throttle is the primary control.** The per-account lockout is secondary: short (15 min), auto-expiring, keyed on IP + account, cleared on success. An indefinite lockout hands anyone who knows the owner's email a denial of service whose only recovery is the shell — the thing this spec exists to eliminate |
+| Rate limits | `/auth/login`, `/setup`, `/auth/claim`, `/auth/claim/complete`, and key creation |
+| CSRF | Same-origin SPA with `SameSite=Lax` cookie, plus an `Origin` / `Sec-Fetch-Site` check on every state-changing method (`POST` / `PUT` / `PATCH` / `DELETE`). Reject `Sec-Fetch-Site: cross-site` and `Origin: null`; require the `Origin` host to equal `Host`. No CSRF token needed |
+| CORS | **No CORS headers are ever sent.** The API serves its own SPA from the same origin and has no other legitimate caller. This is a stated decision, not an omission — an `Access-Control-Allow-Origin` added later is exactly what would turn the row above into a CSRF hole |
+| Sessions | JWTs carry `{ principalId, pwv }` only. `role` and `status` are read live from the principal row on every request, so revocation is immediate |
 | Cookies | `httpOnly`, `Secure` in production, `SameSite=Lax`, `Path=/`. TLS terminates at Caddy |
 | Authorization | Role checked server-side on every mutating endpoint. Last-owner invariant enforced in the service layer, not the route |
 | Audit | Every admin action written to `activities` with actor, target, and timestamp |
@@ -319,10 +411,19 @@ Hiding is presentation only; the server enforces every gate independently.
 ## 7. Delivery plan
 
 **A1 — Backend foundation (Hexagon).** Migration (rename to `principals`, new
-columns, `settings`, `api_keys` v2, nullable `activities.taskId`), HKDF subkey
-derivation, password auth, `/auth/me`, change-password, setup flow, one-time legacy
-`OWNER_TOKEN` claim and `AGENT_API_KEYS` import, board `PATCH` / `DELETE`. Tests.
+columns including `mustChangePassword`, `settings`, `api_keys` v2, nullable
+`activities.taskId`), HKDF subkey derivation, password auth, `/auth/me`,
+change-password, setup flow, one-time legacy `OWNER_TOKEN` claim and
+`AGENT_API_KEYS` import, board `PATCH` / `DELETE`. Tests.
 *This is the slice that ends hand-editing `.env`; ship it first and alone.*
+
+From the security review, A1 also carries: fail-closed `APP_SECRET` validation,
+setup-token expiry and warning banner, transactional setup and claim, the scoped
+`scope=claim` ticket, `timingSafeEqual` on both legacy tokens, per-IP login
+throttling with a short auto-expiring account lockout, `role` and `status` read live
+from the principal row rather than the JWT, and `scripts/reopen-claim.js` for the
+expired-claim path. Rate limiting does not exist anywhere in `server.ts` today, so
+the middleware itself is new work.
 
 Migration is executed against a backup copy first, verified with
 `PRAGMA foreign_key_check` and a `.schema` inspection, with copy-and-swap as the
@@ -354,6 +455,25 @@ A1 and A2 PRs against section 6.
    shown once; rotation supports a grace window.
 6. Secret settings are write-only over the API. No endpoint returns a stored
    secret's plaintext.
+7. Sessions carry no authorization claims. `role` and `status` are read live from
+   the principal row, so demotion and disabling take effect on the next request
+   rather than at token expiry.
+8. The one-time legacy `OWNER_TOKEN` claim path expires 7 days after migration and
+   issues a scoped claim ticket, never a session.
+
+## 8a. Review history
+
+- **Hexagon** (backend, 2026-09-19) — migration feasibility, `activities` query
+  impact, A1/A2 split. Raised the single-factor weakness in section 2.1 and the
+  placeholder-import gap.
+- **Guard** (security, 2026-09-19) — threat review of sections 0-9 against the live
+  code. Verdict: sound architecture, ship after fixes. Every finding is folded in
+  above: setup-token lifetime and TOCTOU (2), claim-path expiry, scoped ticket,
+  constant-time compare and unimportable-key logging (2.1), fail-closed `APP_SECRET`
+  and key versioning (1), live role reads (4), `mustChangePassword` (3.1, 4),
+  lockout DoS and the explicit no-CORS decision (6), short-secret previews (3.3),
+  `login_failed` payload (3.4). Full text:
+  `docs/reviews/2026-09-19-security-review-guard.md`.
 
 ## 9. Open questions for the owner
 
