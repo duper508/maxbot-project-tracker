@@ -512,6 +512,37 @@ Migration is executed against a backup copy first, verified with
 fallback if `ALTER TABLE ... RENAME TO` leaves any stale FK reference. The same
 change turns on `PRAGMA foreign_keys = ON` in `db/index.ts`, which is currently off.
 
+**A1 test plan.** Agreed with Hexagon in review; this is A1's acceptance criteria,
+not a suggestion. `server/` has no test files at all today, so all five are new.
+
+| File | Covers |
+|------|--------|
+| `server/src/lib/rate-limit.test.ts` | Per-IP and per-account throttling, lockout behaviour, reset on success. **Net-new middleware — there is no rate limiting anywhere in `server.ts` to model on** |
+| `server/src/lib/auth.test.ts` | HKDF subkey derivation, password and API-key hashing, JWT sign/verify with `pwv`, live role/status reads, constant-time compares |
+| `server/src/services/auth.test.ts` | Fresh `/setup`, setup-token expiry, legacy `/auth/claim`, scoped claim ticket, `/setup` adoption, `409 CLAIM_REQUIRED`, `mustChangePassword`, password change, login/logout, stale-session rejection after a password change |
+| `server/src/routes/auth.test.ts` | The above through HTTP (Hono, in-memory libsql), including the six activation cases below |
+| `server/src/db/migrations.test.ts` | Forward migration from a v1 schema snapshot, `PRAGMA foreign_key_check`, id-preserving adoption |
+
+The six activation and migration cases, which are where §2.2 either holds or does
+not:
+
+1. **Fresh setup** — zero human principals; `/setup` creates the owner, sets a
+   password, and the next boot prints no token.
+2. **Migrated with `OWNER_TOKEN`** — claim path live; `/auth/claim` with both
+   factors sets the password.
+3. **Migrated without `OWNER_TOKEN`** — `/setup` adopts the orphaned owner row and
+   **preserves its `id`**.
+4. **Claim-over-setup precedence** — while the claim is live, a `/setup` call with a
+   *valid* setup token returns `409 CLAIM_REQUIRED` **and writes no `passwordHash`**.
+5. **Adoption ambiguity** — two null-hash humans; `500 ADOPTION_AMBIGUOUS` and
+   **neither row is written**.
+6. **Migration safety** — v1 schema snapshot forward-migrates with
+   `PRAGMA foreign_key_check` clean.
+
+Cases 4 and 5 carry negative assertions on purpose. Both guard paths that are
+supposed to refuse, and a path that writes before it refuses passes a
+status-code-only test while doing the exact damage the rule exists to prevent.
+
 **A2 — Admin API (Hexagon).** Principals CRUD, key issue/rotate/revoke with grace
 window, settings read/write with AES-256-GCM, relay test endpoint, admin audit
 entries. Tests.
