@@ -463,11 +463,66 @@ and "Agents" as `href="#"` links with `onClick={(e) => e.preventDefault()}`. Add
 | `/settings/keys` | Per-principal keys: name, prefix, last used, expires, status. Create / rotate / revoke |
 | `/settings/boards` | Create, rename, edit columns, delete |
 | `/settings/integrations` | Buzz relay URL, service pubkey, verify-signatures toggle, webhook secret (write-only), **Test connection** |
-| `/settings/account` | Change own password |
+| `/settings/account` | Account settings; links to `/change-password` |
+| `/change-password` | Handles both a voluntary change and a forced `mustChangePassword` ticket, headline adapted to the trigger |
 
-Key-reveal modal: shows the plaintext exactly once, with a copy button and explicit
-"this will not be shown again" copy. No "reveal" affordance anywhere else in the UI,
-because the server cannot satisfy one.
+`/change-password` is one route, not two. The forced and voluntary flows submit the
+same form against the same endpoint and differ only in how the caller authenticated
+and what the headline says; splitting them duplicates the password-rules UI and the
+error handling for no gain. *(Gap found by Comb in review — §4 specified
+`mustChangePassword` with nowhere for it to land.)*
+
+### 5.1 Key-reveal modal
+
+Dismissal must be **deliberate**, because the server genuinely cannot re-issue the
+value and an accidental close destroys it:
+
+- No header close button, no click-outside-to-dismiss, no escape-to-close.
+- The only exit is a primary **Copy and close** action, disabled until
+  `navigator.clipboard.writeText` resolves. If the browser blocks clipboard access,
+  fall back to a required "I have saved this key" checkbox.
+- A persistent banner sits above the key: *"This is the only time the plaintext key
+  is shown. Save it in your agent's environment or password manager before
+  closing."*
+- After close, the keys list shows name, prefix, last used, expires and status —
+  and no reveal affordance anywhere, because §3.2 means the server cannot satisfy
+  one.
+
+### 5.2 Members
+
+**One table with a `kind` column**, matching the unified `principals` model:
+name, kind badge (human / agent), role, status, last active, actions. Filter chips
+above for All / Humans / Agents. Two tables would duplicate the role and status
+logic for two row types that share both.
+
+The *add* action does split, because the flows diverge immediately: **Invite human**
+takes an email and generates a temporary password (§4), while **Add agent** takes a
+display name and role and ends in the §5.1 key-reveal modal.
+
+### 5.3 Activation routing
+
+The SPA routes everything through `/setup` so the operator never has to know what a
+"claim" is before the app tells them. The wizard submits to `POST /api/v1/setup` and
+branches on the response (§2.2):
+
+| Response | Behaviour |
+|----------|-----------|
+| success | land on the board |
+| `409 CLAIM_REQUIRED` | swap the form in place to the legacy claim flow — setup token + owner token, then the ticket-based password set |
+| `410 CLAIM_EXPIRED` | inline notice, *"The legacy claim window has expired. Finish setup below."*, stay on the setup form |
+
+Probing `/setup` first is safe: §2.2 makes it fail closed with `409` while the claim
+path is live, writing nothing.
+
+### 5.4 Scoped ticket expiry
+
+The claim ticket lives 10 minutes (§2.1.4), which is short enough to expire under a
+user who is mid-form. Both the claim-complete form and the forced-change form show a
+visible countdown ("Expires in 8m 42s") and disable submit at zero, then replace the
+form with "This setup link has expired" and a button back to `/setup` or `/login`.
+
+**No auto-redirect.** Someone typing a password when the timer runs out needs to be
+told why it failed, not silently moved.
 
 Navigation is role-aware — `owner`-only tabs are hidden from editors and viewers.
 Hiding is presentation only; the server enforces every gate independently.
@@ -592,6 +647,10 @@ A1 and A2 PRs against section 6.
   lockout DoS and the explicit no-CORS decision (6), short-secret previews (3.3),
   `login_failed` payload (3.4). Full text:
   `docs/reviews/2026-09-19-security-review-guard.md`.
+- **Comb** (frontend, 2026-09-19) — reviewed §5. Settled the key-reveal dismissal
+  model (5.1), one members table over two (5.2), and `/setup`-first activation
+  routing (5.3). Found that §4 specified `mustChangePassword` with no route to land
+  on; added `/change-password` handling both triggers. Verdict: no blockers.
 - **Guard** (sign-off re-verification, 2026-09-19) — two further gaps in the boot
   token's state machine, both folded into 2.2: "setup mode" never fired for a
   migrated instance, and a v1 deploy that never set `OWNER_TOKEN` migrated into a
