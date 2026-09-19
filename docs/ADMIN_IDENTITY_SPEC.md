@@ -83,13 +83,22 @@ The live instance already has an `OWNER_TOKEN` and agent rows. The migration mus
 not lock the owner out:
 
 1. Migration runs. If `OWNER_TOKEN` is present in env and no human principal has a
-   password, the server enables a **one-time claim path**: logging in with the old
-   owner token is accepted exactly once and immediately forces "choose an email and
-   password" before anything else is reachable.
-2. On completion the server writes `settings['auth.legacyTokenDisabled'] = true`
+   password, the server enables a **one-time claim path**: the old owner token is
+   accepted exactly once and immediately forces "choose an email and password"
+   before anything else is reachable.
+2. The claim path requires **both** `OWNER_TOKEN` *and* the boot setup token from
+   §2 — not the owner token alone. `OWNER_TOKEN` lives in `.env`, so accepting it
+   by itself would let anyone with env access claim ownership ahead of the real
+   owner. Requiring both raises the bar to "`.env` access **and** log access",
+   which is exactly the bar first-boot setup already sets. *(Raised by Hexagon in
+   review; the single-factor version was the weakest point in the draft.)*
+3. On completion the server writes `settings['auth.legacyTokenDisabled'] = true`
    and never honours `OWNER_TOKEN` again, present in env or not.
-3. `AGENT_API_KEYS`, if present, is imported once into `api_keys` (prefix + SHA-256
-   of the existing raw key) so no running agent breaks, then ignored forever.
+4. `AGENT_API_KEYS`, if present, is imported once into `api_keys` (prefix + SHA-256
+   of the existing raw key) so no running agent breaks, then ignored forever. The
+   importer **skips and warns** on entries whose key still matches a `.env.example`
+   placeholder (`oc_xxx`, `hex_xxx`, and similar) rather than minting them as live
+   credentials.
 
 Mandatory runbook step before upgrading:
 
@@ -266,6 +275,8 @@ POST   /api/v1/settings/buzz/test       -- dial the relay, report reachability,
 
 `POST /api/v1/boards` already exists; `PATCH` and `DELETE` are added, and the UI is
 wired to all three. Board creation requires `owner` or `editor`; deletion `owner`.
+Both new endpoints land in **A1** — they are small, and shipping them early lets the
+Settings → Boards tab go out without waiting for the rest of the admin surface.
 
 ## 5. Frontend
 
@@ -310,8 +321,13 @@ Hiding is presentation only; the server enforces every gate independently.
 **A1 — Backend foundation (Hexagon).** Migration (rename to `principals`, new
 columns, `settings`, `api_keys` v2, nullable `activities.taskId`), HKDF subkey
 derivation, password auth, `/auth/me`, change-password, setup flow, one-time legacy
-`OWNER_TOKEN` claim and `AGENT_API_KEYS` import. Tests. *This is the slice that ends
-hand-editing `.env`; ship it first and alone.*
+`OWNER_TOKEN` claim and `AGENT_API_KEYS` import, board `PATCH` / `DELETE`. Tests.
+*This is the slice that ends hand-editing `.env`; ship it first and alone.*
+
+Migration is executed against a backup copy first, verified with
+`PRAGMA foreign_key_check` and a `.schema` inspection, with copy-and-swap as the
+fallback if `ALTER TABLE ... RENAME TO` leaves any stale FK reference. The same
+change turns on `PRAGMA foreign_keys = ON` in `db/index.ts`, which is currently off.
 
 **A2 — Admin API (Hexagon).** Principals CRUD, key issue/rotate/revoke with grace
 window, settings read/write with AES-256-GCM, relay test endpoint, admin audit
