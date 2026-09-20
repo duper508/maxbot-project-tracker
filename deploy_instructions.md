@@ -31,7 +31,7 @@ cp .env.example .env
 Edit `.env` and set the required values:
 
 - `APP_SECRET` — 64-character hex root secret; used to derive session and data subkeys
-- `TRUSTED_PROXY_CIDR` — optional CIDR (e.g. `127.0.0.1/32`); when the socket peer is inside this range, `X-Forwarded-For` is honored for rate-limit keys. Leave unset to use the socket peer directly.
+- `TRUSTED_PROXY_CIDR` — **required when running behind Caddy/reverse proxy**. CIDR of the Docker bridge subnet the container sees (e.g. `172.28.0.0/16` for the subnet declared in `docker-compose.yml`). Do **not** use `127.0.0.1/32`: from inside the container the socket peer is the Docker gateway, not the host loopback. Leave unset to use the socket peer directly.
 - `OWNER_TOKEN` — pre-shared token humans use at `POST /api/v1/auth/login`
 - `AGENT_API_KEYS` — optional, format `role:Name:key`
 - `BUZZ_RELAY_URL`, `BUZZ_SERVICE_PUBKEY` — optional Buzz webhook integration
@@ -152,6 +152,8 @@ PORT=8380
 HOST=0.0.0.0
 SQLITE_PATH=file:/home/lance/kanban-data/kanban.db
 APP_SECRET=0000000000000000000000000000000000000000000000000000000000000000
+# Manual/host deployment: Caddy and the app are both on the host, so the peer is 127.0.0.1.
+# For Docker Compose use the container bridge subnet (172.28.0.0/16 in docker-compose.yml).
 TRUSTED_PROXY_CIDR=127.0.0.1/32
 JWT_EXPIRY=7d
 OWNER_TOKEN=your-owner-token-for-human-login
@@ -165,7 +167,7 @@ Notes:
 - `OWNER_TOKEN` is the pre-shared token humans exchange for a session cookie at `POST /api/v1/auth/login`.
 - `AGENT_API_KEYS` format: `role:Name:key`. Roles can be `owner`, `editor`, or `viewer`.
 - `APP_SECRET` must be exactly 64 hex characters; the server fails closed if it is missing or malformed.
-- `TRUSTED_PROXY_CIDR` is required for rate-limiting to work behind a reverse proxy. When unset, rate limits key on the socket peer address and `X-Forwarded-For` is ignored to prevent spoofing.
+- `TRUSTED_PROXY_CIDR` must match the actual socket peer the app sees. For Docker Compose that is the bridge gateway/subnet (see `.env.example`), not `127.0.0.1/32`. When unset, rate limits key on the socket peer address and `X-Forwarded-For` is ignored to prevent spoofing.
 - Ensure the SQLite parent directory exists and is writable: `mkdir -p /home/lance/kanban-data`.
 
 ## 5. Database

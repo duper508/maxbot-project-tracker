@@ -88,6 +88,8 @@ function forwardedClientIp(forwarded: string): string | undefined {
   return last && isIP(last) !== 0 ? last : undefined;
 }
 
+let warnedAboutUnknownPeer = false;
+
 export function clientIp(c: Context, trustedProxyCidr?: string): string {
   let peer: string;
   try {
@@ -97,6 +99,15 @@ export function clientIp(c: Context, trustedProxyCidr?: string): string {
     // Tests and other non-Node environments fall back to a shared "unknown" key.
     peer = "unknown";
   }
+
+  if (peer === "unknown" && !warnedAboutUnknownPeer && config.NODE_ENV === "production") {
+    warnedAboutUnknownPeer = true;
+    console.warn(
+      "[rate-limit] Could not determine socket peer address; rate limits will share a single 'unknown' key. " +
+        "Ensure the server is running through @hono/node-server.",
+    );
+  }
+
   const cidr = trustedProxyCidr ?? config.TRUSTED_PROXY_CIDR;
   if (cidr && isIpInCidr(peer, cidr)) {
     const forwarded = c.req.header("x-forwarded-for");
