@@ -6,7 +6,7 @@ services:
     container_name: buzz-kanban
     restart: unless-stopped
     ports:
-      - "8380:3000"
+      - "127.0.0.1:8380:3000"
     env_file:
       - .env
     volumes:
