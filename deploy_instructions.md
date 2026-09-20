@@ -160,7 +160,9 @@ JWT_EXPIRY=7d
 # Legacy v1 owner token, consumed once during the claim window on migrated instances.
 OWNER_TOKEN=your-owner-token-for-human-login
 # Imported once at first boot. Format: role:Name:bzk_<prefix>_<secret>
-AGENT_API_KEYS=owner:OpenClaw:bzk_rz75ihlkajnp_rwwwl7d7qohupxceerkzt2gbkehtyhch,editor:Hexagon:bzk_gxhofcbufujw_2gvohuca23qmumlgzqxqwoyk6zh6ooxn
+# The example values below are placeholders and will be skipped. Generate real keys via the
+# settings UI after setup, or with the generateApiKey helper in server/src/lib/auth.ts.
+AGENT_API_KEYS=owner:OpenClaw:bzk_exampleaaaaa_donotusereplacegeneratedkeyy,editor:Hexagon:bzk_examplebbbbb_donotusereplacegeneratedkeyy
 BUZZ_RELAY_URL=wss://buzz.10ktechnology.com
 BUZZ_SERVICE_PUBKEY=<hex-pubkey-for-buzz-webhook-verification>
 BUZZ_VERIFY_SIGNATURES=true
@@ -168,7 +170,7 @@ BUZZ_VERIFY_SIGNATURES=true
 
 Notes:
 - `OWNER_TOKEN` is a legacy v1 credential. On migrated instances it is consumed once during the claim window; on fresh instances the owner is created with the setup token printed at first boot. Humans log in with email + password at `POST /api/v1/auth/login`.
-- `AGENT_API_KEYS` format: `role:Name:bzk_<prefix>_<secret>`. Roles can be `owner`, `editor`, or `viewer`.
+- `AGENT_API_KEYS` format: `role:Name:bzk_<prefix>_<secret>`. Roles can be `owner`, `editor`, or `viewer`. Example/placeholder keys are skipped at seed time; generate real keys via the settings UI or the `generateApiKey` helper.
 - `APP_SECRET` must be exactly 64 hex characters and cannot be an obvious placeholder; the server fails closed on boot if it is missing, malformed, or weak.
 - `TRUSTED_PROXY_CIDR` must match the actual socket peer the app sees. For Docker Compose that is the bridge gateway/subnet (see `.env.example`), not `127.0.0.1/32`. When unset, rate limits key on the socket peer address and `X-Forwarded-For` is ignored to prevent spoofing.
 - Ensure the SQLite parent directory exists and is writable: `mkdir -p /home/lance/kanban-data`.
@@ -269,7 +271,7 @@ Bearer-token auth using a key from `AGENT_API_KEYS` (`bzk_<prefix>_<secret>` for
 Example:
 ```bash
 curl -X POST https://apps.10ktechnology.com/kanban/api/v1/agent-actions \
-  -H "Authorization: Bearer bzk_rz75ihlkajnp_rwwwl7d7qohupxceerkzt2gbkehtyhch" \
+  -H "Authorization: Bearer bzk_exampleaaaaa_donotusereplacegeneratedkeyy" \
   -H "Content-Type: application/json" \
   -d '{"action":"create_task","payload":{"title":"From agent"}}'
 ```
@@ -282,7 +284,7 @@ Same auth and action vocabulary as `/agent-actions`, plus an optional `artifact`
 Example:
 ```bash
 curl -X POST https://apps.10ktechnology.com/kanban/api/v1/openclaw \
-  -H "Authorization: Bearer bzk_gxhofcbufujw_2gvohuca23qmumlgzqxqwoyk6zh6ooxn" \
+  -H "Authorization: Bearer bzk_examplebbbbb_donotusereplacegeneratedkeyy" \
   -H "Content-Type: application/json" \
   -d '{
     "action":"create_task",
