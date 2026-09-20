@@ -1,11 +1,11 @@
 import { z, OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import { authMiddleware, requireRole } from "../lib/auth.js";
-import type { Agent } from "../db/schema.js";
+import type { Principal } from "../db/schema.js";
 import { executeAgentAction } from "../services/agent-actions.js";
 import { createResource } from "../services/resources.js";
 import { errorSchema, taskToJson, commentToJson, resourceToJson } from "./common.js";
 
-const app = new OpenAPIHono<{ Variables: { agent: Agent } }>();
+const app = new OpenAPIHono<{ Variables: { principal: Principal } }>();
 app.use("*", authMiddleware);
 
 const artifactSchema = z.object({
@@ -57,8 +57,8 @@ const openclawRoute = createRoute({
 });
 
 app.openapi(openclawRoute, async (c) => {
-  requireRole(c.get("agent"), ["owner", "editor"]);
-  const agentId = c.get("agent").id;
+  requireRole(c.get("principal"), ["owner", "editor"]);
+  const agentId = c.get("principal").id;
   const body = c.req.valid("json");
 
   const result = await executeAgentAction(agentId, {

@@ -7,7 +7,7 @@ import { badRequest, notFound } from "../lib/errors.js";
 import type { NostrEvent } from "../lib/nostr.js";
 import { eq } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { agents } from "../db/schema.js";
+import { principals } from "../db/schema.js";
 
 export type BuzzAction =
   | { type: "create_task"; title: string; fields: Record<string, string> }
@@ -82,22 +82,22 @@ async function resolveBoardId(fields: Record<string, string>): Promise<string> {
 
 async function resolveAssignee(query: string): Promise<string> {
   // Try exact id first
-  const byId = await db.select().from(agents).where(eq(agents.id, query)).limit(1);
+  const byId = await db.select().from(principals).where(eq(principals.id, query)).limit(1);
   if (byId.length > 0) return byId[0].id;
 
   // Try display name (case-insensitive)
   const byName = await db
     .select()
-    .from(agents)
-    .where(eq(agents.displayName, query))
+    .from(principals)
+    .where(eq(principals.displayName, query))
     .limit(1);
   if (byName.length > 0) return byName[0].id;
 
   // Try external id
   const byExternal = await db
     .select()
-    .from(agents)
-    .where(eq(agents.externalId, query))
+    .from(principals)
+    .where(eq(principals.externalId, query))
     .limit(1);
   if (byExternal.length > 0) return byExternal[0].id;
 

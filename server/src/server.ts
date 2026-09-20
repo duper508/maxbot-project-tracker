@@ -8,7 +8,11 @@ import { migrate } from "drizzle-orm/libsql/migrator";
 import { config } from "./config.js";
 import { db } from "./db/index.js";
 import { seedDatabase } from "./services/seed.js";
+import { isInstanceUnclaimed, initializeSetupToken } from "./services/auth.js";
 import { KanbanError } from "./lib/errors.js";
+import { setupGate } from "./lib/setup-gate.js";
+import { csrfMiddleware } from "./lib/csrf.js";
+import setupRoutes from "./routes/setup.js";
 import authRoutes from "./routes/auth.js";
 import agentRoutes from "./routes/agents.js";
 import boardRoutes from "./routes/boards.js";
@@ -30,10 +34,17 @@ app.onError((err, c) => {
 
 app.notFound((c) => c.json({ error: { message: "Not found", code: "NOT_FOUND" } }, 404));
 
-// Health check
+// Health check is exempt from the setup gate.
 app.get("/health", (c) => c.json({ ok: true }));
 
+// CSRF protection for state-changing requests (same-origin SPA, no CORS).
+app.use(csrfMiddleware);
+
+// While the instance is unclaimed, only the active activation endpoint is reachable.
+app.use("/api/v1/*", setupGate);
+
 // API routes
+app.route("/api/v1/setup", setupRoutes);
 app.route("/api/v1/auth", authRoutes);
 app.route("/api/v1/agents", agentRoutes);
 app.route("/api/v1/boards", boardRoutes);
@@ -67,6 +78,15 @@ async function bootstrap() {
   await migrate(db, { migrationsFolder: "./migrations" });
   await seedDatabase();
 
+  if (await isInstanceUnclaimed()) {
+    const token = initializeSetupToken();
+    console.log("============================================================");
+    console.log(`SETUP TOKEN: ${token}`);
+    console.log("This token grants full ownership of this instance.");
+    console.log("Valid for 60 minutes. Treat it as a password, not a log line.");
+    console.log("============================================================");
+  }
+
   serve({
     fetch: app.fetch,
     port: config.PORT,
@@ -76,9 +96,11 @@ async function bootstrap() {
   console.log(`Buzz Kanban server running at http://${config.HOST}:${config.PORT}`);
 }
 
-bootstrap().catch((err) => {
-  console.error("Bootstrap failed:", err);
-  process.exit(1);
-});
+if (process.env.NODE_ENV !== "test") {
+  bootstrap().catch((err) => {
+    console.error("Bootstrap failed:", err);
+    process.exit(1);
+  });
+}
 
-export { app };
+export { app, bootstrap };

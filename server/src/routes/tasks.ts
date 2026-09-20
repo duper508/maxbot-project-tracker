@@ -1,6 +1,6 @@
 import { z, OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import { authMiddleware, requireRole } from "../lib/auth.js";
-import type { Agent } from "../db/schema.js";
+import type { Principal } from "../db/schema.js";
 import {
   listTasks,
   getTask,
@@ -30,7 +30,7 @@ import {
 } from "./common.js";
 import { listActivities } from "../services/activities.js";
 
-const app = new OpenAPIHono<{ Variables: { agent: Agent } }>();
+const app = new OpenAPIHono<{ Variables: { principal: Principal } }>();
 app.use("*", authMiddleware);
 
 const priorityEnum = z.enum(["low", "medium", "high", "urgent"]);
@@ -94,9 +94,9 @@ const createRouteDef = createRoute({
 });
 
 app.openapi(createRouteDef, async (c) => {
-  requireRole(c.get("agent"), ["owner", "editor"]);
+  requireRole(c.get("principal"), ["owner", "editor"]);
   const body = c.req.valid("json");
-  const task = await createTask({ ...body, createdBy: c.get("agent").id });
+  const task = await createTask({ ...body, createdBy: c.get("principal").id });
   return c.json(taskToJson(task), 201);
 });
 
@@ -150,10 +150,10 @@ const updateRoute = createRoute({
 });
 
 app.openapi(updateRoute, async (c) => {
-  requireRole(c.get("agent"), ["owner", "editor"]);
+  requireRole(c.get("principal"), ["owner", "editor"]);
   const { id } = c.req.valid("param");
   const body = c.req.valid("json");
-  const task = await updateTask(id, c.get("agent").id, body);
+  const task = await updateTask(id, c.get("principal").id, body);
   return c.json(taskToJson(task), 200);
 });
 
@@ -171,7 +171,7 @@ const deleteRoute = createRoute({
 });
 
 app.openapi(deleteRoute, async (c) => {
-  requireRole(c.get("agent"), ["owner", "editor"]);
+  requireRole(c.get("principal"), ["owner", "editor"]);
   const { id } = c.req.valid("param");
   await deleteTask(id);
   return c.body(null, 204);
@@ -200,10 +200,10 @@ const moveRoute = createRoute({
 });
 
 app.openapi(moveRoute, async (c) => {
-  requireRole(c.get("agent"), ["owner", "editor"]);
+  requireRole(c.get("principal"), ["owner", "editor"]);
   const { id } = c.req.valid("param");
   const { status } = c.req.valid("json");
-  const task = await moveTask(id, c.get("agent").id, status);
+  const task = await moveTask(id, c.get("principal").id, status);
   return c.json(taskToJson(task), 200);
 });
 
@@ -230,10 +230,10 @@ const assignRoute = createRoute({
 });
 
 app.openapi(assignRoute, async (c) => {
-  requireRole(c.get("agent"), ["owner", "editor"]);
+  requireRole(c.get("principal"), ["owner", "editor"]);
   const { id } = c.req.valid("param");
   const { agentId } = c.req.valid("json");
-  const task = await assignTask(id, c.get("agent").id, agentId);
+  const task = await assignTask(id, c.get("principal").id, agentId);
   return c.json(taskToJson(task), 200);
 });
 
@@ -251,9 +251,9 @@ const closeRoute = createRoute({
 });
 
 app.openapi(closeRoute, async (c) => {
-  requireRole(c.get("agent"), ["owner", "editor"]);
+  requireRole(c.get("principal"), ["owner", "editor"]);
   const { id } = c.req.valid("param");
-  const task = await closeTask(id, c.get("agent").id);
+  const task = await closeTask(id, c.get("principal").id);
   return c.json(taskToJson(task), 200);
 });
 
@@ -271,9 +271,9 @@ const reopenRoute = createRoute({
 });
 
 app.openapi(reopenRoute, async (c) => {
-  requireRole(c.get("agent"), ["owner", "editor"]);
+  requireRole(c.get("principal"), ["owner", "editor"]);
   const { id } = c.req.valid("param");
-  const task = await reopenTask(id, c.get("agent").id);
+  const task = await reopenTask(id, c.get("principal").id);
   return c.json(taskToJson(task), 200);
 });
 
@@ -316,10 +316,10 @@ const createCommentRoute = createRoute({
 });
 
 app.openapi(createCommentRoute, async (c) => {
-  requireRole(c.get("agent"), ["owner", "editor"]);
+  requireRole(c.get("principal"), ["owner", "editor"]);
   const { id } = c.req.valid("param");
   const { body } = c.req.valid("json");
-  const comment = await createComment(id, c.get("agent").id, body);
+  const comment = await createComment(id, c.get("principal").id, body);
   return c.json(commentToJson(comment), 201);
 });
 
@@ -367,10 +367,10 @@ const createResourceRoute = createRoute({
 });
 
 app.openapi(createResourceRoute, async (c) => {
-  requireRole(c.get("agent"), ["owner", "editor"]);
+  requireRole(c.get("principal"), ["owner", "editor"]);
   const { id } = c.req.valid("param");
   const body = c.req.valid("json");
-  const resource = await createResource({ ...body, taskId: id, addedBy: c.get("agent").id });
+  const resource = await createResource({ ...body, taskId: id, addedBy: c.get("principal").id });
   return c.json(resourceToJson(resource), 201);
 });
 
@@ -387,7 +387,7 @@ const deleteResourceRoute = createRoute({
 });
 
 app.openapi(deleteResourceRoute, async (c) => {
-  requireRole(c.get("agent"), ["owner", "editor"]);
+  requireRole(c.get("principal"), ["owner", "editor"]);
   const { id } = c.req.valid("param");
   const { deleteResource } = await import("../services/resources.js");
   await deleteResource(id);

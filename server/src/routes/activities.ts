@@ -1,10 +1,10 @@
 import { z, OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import { authMiddleware } from "../lib/auth.js";
-import type { Agent } from "../db/schema.js";
+import type { Principal } from "../db/schema.js";
 import { listActivities } from "../services/activities.js";
 import { activitySchema, listResponse, errorSchema, activityToJson } from "./common.js";
 
-const app = new OpenAPIHono<{ Variables: { agent: Agent } }>();
+const app = new OpenAPIHono<{ Variables: { principal: Principal } }>();
 app.use("*", authMiddleware);
 
 const listRoute = createRoute({
