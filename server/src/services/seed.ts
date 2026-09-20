@@ -6,9 +6,17 @@ import { generateId, now } from "../lib/id.js";
 import { hashApiKeySecret, parseApiKey } from "../lib/auth.js";
 import { DEFAULT_COLUMNS } from "./boards.js";
 
-const PLACEHOLDER_PATTERNS = [/^oc_xxx/i, /^hex_xxx/i, /^xxx_/i, /^placeholder/i, /^example/i];
+const PLACEHOLDER_PATTERNS = [
+  /^oc_xxx/i,
+  /^hex_xxx/i,
+  /^xxx_/i,
+  /^placeholder/i,
+  /^example/i,
+  /bzk_example/i,
+  /donotuse/i,
+];
 
-function isPlaceholderKey(key: string): boolean {
+export function isPlaceholderKey(key: string): boolean {
   return PLACEHOLDER_PATTERNS.some((pattern) => pattern.test(key));
 }
 
