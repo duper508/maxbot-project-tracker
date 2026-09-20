@@ -30,10 +30,10 @@ cp .env.example .env
 
 Edit `.env` and set the required values:
 
-- `APP_SECRET` — 64-character hex root secret; used to derive session and data subkeys
+- `APP_SECRET` — 64-character hex root secret; used to derive session and data subkeys. Generate with `openssl rand -hex 32`. The server rejects all-zero and repeated-character placeholders.
 - `TRUSTED_PROXY_CIDR` — **required when running behind Caddy/reverse proxy**. CIDR of the Docker bridge subnet the container sees (e.g. `172.28.0.0/16` for the subnet declared in `docker-compose.yml`). Do **not** use `127.0.0.1/32`: from inside the container the socket peer is the Docker gateway, not the host loopback. Leave unset to use the socket peer directly.
-- `OWNER_TOKEN` — pre-shared token humans use at `POST /api/v1/auth/login`
-- `AGENT_API_KEYS` — optional, format `role:Name:key`
+- `OWNER_TOKEN` — legacy v1 owner token, consumed once during the claim window on migrated instances. Fresh instances use the setup token printed at first boot.
+- `AGENT_API_KEYS` — optional, format `role:Name:bzk_<prefix>_<secret>`. Imported once at first boot.
 - `BUZZ_RELAY_URL`, `BUZZ_SERVICE_PUBKEY` — optional Buzz webhook integration
 
 `.env` is gitignored, so it will not be committed.
@@ -54,10 +54,10 @@ The service listens on `http://0.0.0.0:8380`.
 # Health check
 curl http://localhost:8380/health
 
-# Login (replace OWNER_TOKEN)
+# Login (use the owner email and password set during setup/claim)
 curl -c cookies.txt -X POST http://localhost:8380/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"token":"YOUR_OWNER_TOKEN"}'
+  -d '{"email":"owner@example.com","password":"the-password-you-set"}'
 
 # List boards
 curl -b cookies.txt http://localhost:8380/api/v1/boards
@@ -151,22 +151,25 @@ NODE_ENV=production
 PORT=8380
 HOST=0.0.0.0
 SQLITE_PATH=file:/home/lance/kanban-data/kanban.db
-APP_SECRET=0000000000000000000000000000000000000000000000000000000000000000
+# Generate a real 64-character hex value with: openssl rand -hex 32
+APP_SECRET=REPLACE_WITH_64_HEX_CHARS_GENERATED_BY_OPENSSL_RAND_HEX_32
 # Manual/host deployment: Caddy and the app are both on the host, so the peer is 127.0.0.1.
 # For Docker Compose use the container bridge subnet (172.28.0.0/16 in docker-compose.yml).
 TRUSTED_PROXY_CIDR=127.0.0.1/32
 JWT_EXPIRY=7d
+# Legacy v1 owner token, consumed once during the claim window on migrated instances.
 OWNER_TOKEN=your-owner-token-for-human-login
-AGENT_API_KEYS=owner:OpenClaw:oc_xxx,editor:Hexagon:hex_xxx
+# Imported once at first boot. Format: role:Name:bzk_<prefix>_<secret>
+AGENT_API_KEYS=owner:OpenClaw:bzk_rz75ihlkajnp_rwwwl7d7qohupxceerkzt2gbkehtyhch,editor:Hexagon:bzk_gxhofcbufujw_2gvohuca23qmumlgzqxqwoyk6zh6ooxn
 BUZZ_RELAY_URL=wss://buzz.10ktechnology.com
 BUZZ_SERVICE_PUBKEY=<hex-pubkey-for-buzz-webhook-verification>
 BUZZ_VERIFY_SIGNATURES=true
 ```
 
 Notes:
-- `OWNER_TOKEN` is the pre-shared token humans exchange for a session cookie at `POST /api/v1/auth/login`.
-- `AGENT_API_KEYS` format: `role:Name:key`. Roles can be `owner`, `editor`, or `viewer`.
-- `APP_SECRET` must be exactly 64 hex characters; the server fails closed if it is missing or malformed.
+- `OWNER_TOKEN` is a legacy v1 credential. On migrated instances it is consumed once during the claim window; on fresh instances the owner is created with the setup token printed at first boot. Humans log in with email + password at `POST /api/v1/auth/login`.
+- `AGENT_API_KEYS` format: `role:Name:bzk_<prefix>_<secret>`. Roles can be `owner`, `editor`, or `viewer`.
+- `APP_SECRET` must be exactly 64 hex characters and cannot be an obvious placeholder; the server fails closed on boot if it is missing, malformed, or weak.
 - `TRUSTED_PROXY_CIDR` must match the actual socket peer the app sees. For Docker Compose that is the bridge gateway/subnet (see `.env.example`), not `127.0.0.1/32`. When unset, rate limits key on the socket peer address and `X-Forwarded-For` is ignored to prevent spoofing.
 - Ensure the SQLite parent directory exists and is writable: `mkdir -p /home/lance/kanban-data`.
 
@@ -260,13 +263,13 @@ Two authenticated endpoints are available for agents:
 ### Generic agent actions
 `POST /kanban/api/v1/agent-actions`
 
-Bearer-token auth using a key from `AGENT_API_KEYS`. Supports:
+Bearer-token auth using a key from `AGENT_API_KEYS` (`bzk_<prefix>_<secret>` format). Supports:
 `create_task`, `close_task`, `reopen_task`, `comment`, `assign`, `attach_resource`.
 
 Example:
 ```bash
 curl -X POST https://apps.10ktechnology.com/kanban/api/v1/agent-actions \
-  -H "Authorization: Bearer hex_yourKey" \
+  -H "Authorization: Bearer bzk_rz75ihlkajnp_rwwwl7d7qohupxceerkzt2gbkehtyhch" \
   -H "Content-Type: application/json" \
   -d '{"action":"create_task","payload":{"title":"From agent"}}'
 ```
@@ -279,7 +282,7 @@ Same auth and action vocabulary as `/agent-actions`, plus an optional `artifact`
 Example:
 ```bash
 curl -X POST https://apps.10ktechnology.com/kanban/api/v1/openclaw \
-  -H "Authorization: Bearer oc_yourKey" \
+  -H "Authorization: Bearer bzk_gxhofcbufujw_2gvohuca23qmumlgzqxqwoyk6zh6ooxn" \
   -H "Content-Type: application/json" \
   -d '{
     "action":"create_task",
@@ -299,10 +302,10 @@ Receives Nostr events. Set `BUZZ_SERVICE_PUBKEY` to the hex pubkey the service l
 # Health check
 curl https://apps.10ktechnology.com/kanban/health
 
-# Login (replace OWNER_TOKEN)
+# Login (use the owner email and password set during setup/claim)
 curl -c cookies.txt -X POST https://apps.10ktechnology.com/kanban/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"token":"YOUR_OWNER_TOKEN"}'
+  -d '{"email":"owner@example.com","password":"the-password-you-set"}'
 
 # List boards
 curl -b cookies.txt https://apps.10ktechnology.com/kanban/api/v1/boards
