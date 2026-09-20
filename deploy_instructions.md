@@ -32,7 +32,7 @@ Edit `.env` and set the required values:
 
 - `APP_SECRET` — 64-character hex root secret; used to derive session and data subkeys. Generate with `openssl rand -hex 32`. The server rejects all-zero and repeated-character placeholders.
 - `TRUSTED_PROXY_CIDR` — **required when running behind Caddy/reverse proxy**. CIDR of the Docker bridge subnet the container sees (e.g. `172.28.0.0/16` for the subnet declared in `docker-compose.yml`). Do **not** use `127.0.0.1/32`: from inside the container the socket peer is the Docker gateway, not the host loopback. Leave unset to use the socket peer directly.
-- `OWNER_TOKEN` — legacy v1 owner token, consumed once during the claim window on migrated instances. Fresh instances use the setup token printed at first boot.
+- `OWNER_TOKEN` — **leave empty on a fresh install.** Setting it arms the one-time legacy claim path, and `POST /api/v1/setup` then refuses with `409 CLAIM_REQUIRED`. Set it only on a migrated v1 instance during the claim window. Fresh instances activate with the setup token printed at first boot (see *Activate the instance* below).
 - `AGENT_API_KEYS` — optional, format `role:Name:bzk_<prefix>_<secret>`. Imported once at first boot.
 - `BUZZ_RELAY_URL`, `BUZZ_SERVICE_PUBKEY` — optional Buzz webhook integration
 
@@ -48,13 +48,43 @@ This builds the image, starts the container, and persists the SQLite database in
 
 The service listens on `http://0.0.0.0:8380`.
 
-### 4. Verify
+### 4. Activate the instance (first boot)
+
+A fresh database has no owner. On every boot while the instance is unclaimed the server
+prints a one-time setup token to the container log:
+
+```bash
+docker compose logs buzz-kanban | grep -A1 "SETUP TOKEN"
+```
+
+The token is valid for **60 minutes** and grants full ownership — treat it as a password.
+If it expires, restart the container and a new one is printed.
+
+Create the owner account with it:
+
+```bash
+curl -X POST http://localhost:8380/api/v1/setup   -H "Content-Type: application/json"   -d '{
+    "setupToken":"<token-from-the-log>",
+    "email":"owner@example.com",
+    "displayName":"Owner",
+    "password":"<at-least-12-characters>"
+  }'
+```
+
+On success the response sets the session cookie and logs you in. The instance is now claimed,
+so further `POST /api/v1/setup` calls are rejected and no setup token is printed on subsequent
+boots — this step runs exactly once.
+
+If this returns `409 CLAIM_REQUIRED`, `OWNER_TOKEN` is non-empty in `.env` — clear it and
+restart, unless you are deliberately migrating a v1 instance through the claim path.
+
+### 5. Verify
 
 ```bash
 # Health check
 curl http://localhost:8380/health
 
-# Login (use the owner email and password set during setup/claim)
+# Login (use the owner email and password created in the activation step)
 curl -c cookies.txt -X POST http://localhost:8380/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"owner@example.com","password":"the-password-you-set"}'
@@ -63,7 +93,7 @@ curl -c cookies.txt -X POST http://localhost:8380/api/v1/auth/login \
 curl -b cookies.txt http://localhost:8380/api/v1/boards
 ```
 
-### 5. Updating
+### 6. Updating
 
 ```bash
 cd /opt/buzz-kanban
@@ -71,7 +101,7 @@ git pull origin rebuild/buzz-kanban-backend
 docker compose up -d --build
 ```
 
-### 6. Caddy configuration
+### 7. Caddy configuration
 
 If you want the app available at `https://apps.10ktechnology.com/kanban`, add this block to your Caddyfile:
 
@@ -157,11 +187,12 @@ APP_SECRET=REPLACE_WITH_64_HEX_CHARS_GENERATED_BY_OPENSSL_RAND_HEX_32
 # For Docker Compose use the container bridge subnet (172.28.0.0/16 in docker-compose.yml).
 TRUSTED_PROXY_CIDR=127.0.0.1/32
 JWT_EXPIRY=7d
-# Legacy v1 owner token, consumed once during the claim window on migrated instances.
-OWNER_TOKEN=your-owner-token-for-human-login
+# Legacy v1 owner token. Leave empty on fresh installs; set only on migrated instances
+# during the claim window.
+OWNER_TOKEN=
 # Imported once at first boot. Format: role:Name:bzk_<prefix>_<secret>
-# The example values below are placeholders and will be skipped. Generate real keys via the
-# settings UI after setup, or with the generateApiKey helper in server/src/lib/auth.ts.
+# The example values below are placeholders and will be skipped. Generate real keys with the
+# generateApiKey helper in server/src/lib/auth.ts (a settings UI lands in A2).
 AGENT_API_KEYS=owner:OpenClaw:bzk_exampleaaaaa_donotusereplacegeneratedkeyy,editor:Hexagon:bzk_examplebbbbb_donotusereplacegeneratedkeyy
 BUZZ_RELAY_URL=wss://buzz.10ktechnology.com
 BUZZ_SERVICE_PUBKEY=<hex-pubkey-for-buzz-webhook-verification>
@@ -169,8 +200,8 @@ BUZZ_VERIFY_SIGNATURES=true
 ```
 
 Notes:
-- `OWNER_TOKEN` is a legacy v1 credential. On migrated instances it is consumed once during the claim window; on fresh instances the owner is created with the setup token printed at first boot. Humans log in with email + password at `POST /api/v1/auth/login`.
-- `AGENT_API_KEYS` format: `role:Name:bzk_<prefix>_<secret>`. Roles can be `owner`, `editor`, or `viewer`. Example/placeholder keys are skipped at seed time; generate real keys via the settings UI or the `generateApiKey` helper.
+- `OWNER_TOKEN` is a legacy v1 credential and must stay empty on fresh installs — a non-empty value arms the claim path and makes `POST /api/v1/setup` return `409 CLAIM_REQUIRED`. On migrated instances it is consumed once during the claim window. Humans log in with email + password at `POST /api/v1/auth/login`.
+- `AGENT_API_KEYS` format: `role:Name:bzk_<prefix>_<secret>`. Roles can be `owner`, `editor`, or `viewer`. Example/placeholder keys are skipped at seed time; generate real keys with the `generateApiKey` helper in `server/src/lib/auth.ts`. A settings UI for key management lands in A2.
 - `APP_SECRET` must be exactly 64 hex characters and cannot be an obvious placeholder; the server fails closed on boot if it is missing, malformed, or weak.
 - `TRUSTED_PROXY_CIDR` must match the actual socket peer the app sees. For Docker Compose that is the bridge gateway/subnet (see `.env.example`), not `127.0.0.1/32`. When unset, rate limits key on the socket peer address and `X-Forwarded-For` is ignored to prevent spoofing.
 - Ensure the SQLite parent directory exists and is writable: `mkdir -p /home/lance/kanban-data`.
@@ -228,7 +259,24 @@ npm start
 
 The service listens on `http://0.0.0.0:8380` by default.
 
-## 7. Caddy configuration
+## 7. Activate the instance (first boot)
+
+Same as the Docker path: while the instance is unclaimed the server prints a one-time setup
+token to its log (`journalctl -u buzz-kanban | grep -A1 "SETUP TOKEN"` for the systemd
+option). It is valid for 60 minutes and is reprinted on restart.
+
+```bash
+curl -X POST https://apps.10ktechnology.com/kanban/api/v1/setup   -H "Content-Type: application/json"   -d '{
+    "setupToken":"<token-from-the-log>",
+    "email":"owner@example.com",
+    "displayName":"Owner",
+    "password":"<at-least-12-characters>"
+  }'
+```
+
+A `409 CLAIM_REQUIRED` here means `OWNER_TOKEN` is non-empty in `.env`.
+
+## 8. Caddy configuration
 
 Add this block to `/home/lance/guacamole-deploy/Caddyfile` inside the existing `apps.10ktechnology.com` site:
 
@@ -298,13 +346,13 @@ curl -X POST https://apps.10ktechnology.com/kanban/api/v1/openclaw \
 
 Receives Nostr events. Set `BUZZ_SERVICE_PUBKEY` to the hex pubkey the service listens for, and `BUZZ_VERIFY_SIGNATURES=true` to validate event signatures.
 
-## 8. Verify
+## 9. Verify
 
 ```bash
 # Health check
 curl https://apps.10ktechnology.com/kanban/health
 
-# Login (use the owner email and password set during setup/claim)
+# Login (use the owner email and password created in the activation step)
 curl -c cookies.txt -X POST https://apps.10ktechnology.com/kanban/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"owner@example.com","password":"the-password-you-set"}'
@@ -313,7 +361,7 @@ curl -c cookies.txt -X POST https://apps.10ktechnology.com/kanban/api/v1/auth/lo
 curl -b cookies.txt https://apps.10ktechnology.com/kanban/api/v1/boards
 ```
 
-## 9. Updating
+## 10. Updating
 
 ```bash
 cd /opt/buzz-kanban
