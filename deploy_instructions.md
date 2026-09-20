@@ -30,7 +30,8 @@ cp .env.example .env
 
 Edit `.env` and set the required values:
 
-- `SESSION_SECRET` — must be at least 32 characters
+- `APP_SECRET` — 64-character hex root secret; used to derive session and data subkeys
+- `TRUSTED_PROXY_CIDR` — **required when running behind Caddy/reverse proxy**. CIDR of the Docker bridge subnet the container sees (e.g. `172.28.0.0/16` for the subnet declared in `docker-compose.yml`). Do **not** use `127.0.0.1/32`: from inside the container the socket peer is the Docker gateway, not the host loopback. Leave unset to use the socket peer directly.
 - `OWNER_TOKEN` — pre-shared token humans use at `POST /api/v1/auth/login`
 - `AGENT_API_KEYS` — optional, format `role:Name:key`
 - `BUZZ_RELAY_URL`, `BUZZ_SERVICE_PUBKEY` — optional Buzz webhook integration
@@ -79,7 +80,9 @@ apps.10ktechnology.com {
     # ... existing sub-sites ...
 
     handle_path /kanban/* {
-        reverse_proxy localhost:8380
+        reverse_proxy localhost:8380 {
+            trusted_proxies 127.0.0.1
+        }
     }
 }
 ```
@@ -148,7 +151,10 @@ NODE_ENV=production
 PORT=8380
 HOST=0.0.0.0
 SQLITE_PATH=file:/home/lance/kanban-data/kanban.db
-SESSION_SECRET=change-this-to-a-32-char-random-string
+APP_SECRET=0000000000000000000000000000000000000000000000000000000000000000
+# Manual/host deployment: Caddy and the app are both on the host, so the peer is 127.0.0.1.
+# For Docker Compose use the container bridge subnet (172.28.0.0/16 in docker-compose.yml).
+TRUSTED_PROXY_CIDR=127.0.0.1/32
 JWT_EXPIRY=7d
 OWNER_TOKEN=your-owner-token-for-human-login
 AGENT_API_KEYS=owner:OpenClaw:oc_xxx,editor:Hexagon:hex_xxx
@@ -160,7 +166,8 @@ BUZZ_VERIFY_SIGNATURES=true
 Notes:
 - `OWNER_TOKEN` is the pre-shared token humans exchange for a session cookie at `POST /api/v1/auth/login`.
 - `AGENT_API_KEYS` format: `role:Name:key`. Roles can be `owner`, `editor`, or `viewer`.
-- `SESSION_SECRET` must be at least 32 characters.
+- `APP_SECRET` must be exactly 64 hex characters; the server fails closed if it is missing or malformed.
+- `TRUSTED_PROXY_CIDR` must match the actual socket peer the app sees. For Docker Compose that is the bridge gateway/subnet (see `.env.example`), not `127.0.0.1/32`. When unset, rate limits key on the socket peer address and `X-Forwarded-For` is ignored to prevent spoofing.
 - Ensure the SQLite parent directory exists and is writable: `mkdir -p /home/lance/kanban-data`.
 
 ## 5. Database
@@ -225,7 +232,9 @@ apps.10ktechnology.com {
     # ... existing sub-sites ...
 
     handle_path /kanban/* {
-        reverse_proxy localhost:8380
+        reverse_proxy localhost:8380 {
+            trusted_proxies 127.0.0.1
+        }
     }
 }
 ```

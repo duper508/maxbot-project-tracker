@@ -6,11 +6,13 @@ services:
     container_name: buzz-kanban
     restart: unless-stopped
     ports:
-      - "8380:3000"
+      - "127.0.0.1:8380:3000"
     env_file:
       - .env
     volumes:
       - kanban-data:/app/server/data
+    networks:
+      - kanban
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
       interval: 30s
@@ -20,3 +22,9 @@ services:
 
 volumes:
   kanban-data:
+
+networks:
+  kanban:
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16

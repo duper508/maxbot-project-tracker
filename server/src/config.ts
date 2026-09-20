@@ -6,6 +6,9 @@ const envSchema = z.object({
   HOST: z.string().default("0.0.0.0"),
   SQLITE_PATH: z.string().default("file:./data/kanban.db"),
   APP_SECRET: z.string().length(64).regex(/^[0-9a-f]+$/i, "APP_SECRET must be 64 hex characters"),
+  // Optional CIDR of a trusted reverse proxy. When the socket peer address is inside this
+  // range, X-Forwarded-For is honored; otherwise it is ignored to prevent client spoofing.
+  TRUSTED_PROXY_CIDR: z.string().optional(),
   // Legacy v1 credentials, consumed once during first migration/seed and then ignored.
   OWNER_TOKEN: z.string().optional(),
   AGENT_API_KEYS: z.string().optional(),
