@@ -1,10 +1,10 @@
 import { z, OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import { authMiddleware, requireRole } from "../lib/auth.js";
-import type { Agent } from "../db/schema.js";
-import { listAgents, createAgent, getAgent, agentToJson } from "../services/agents.js";
+import type { Principal } from "../db/schema.js";
+import { listPrincipals, createPrincipal, getPrincipal, principalToJson } from "../services/agents.js";
 import { agentSchema, errorSchema, idParamSchema } from "./common.js";
 
-const app = new OpenAPIHono<{ Variables: { agent: Agent } }>();
+const app = new OpenAPIHono<{ Variables: { principal: Principal } }>();
 app.use("*", authMiddleware);
 
 const listRoute = createRoute({
@@ -18,8 +18,8 @@ const listRoute = createRoute({
 });
 
 app.openapi(listRoute, async (c) => {
-  const data = await listAgents();
-  return c.json(data.map(agentToJson), 200);
+  const data = await listPrincipals();
+  return c.json(data.map(principalToJson), 200);
 });
 
 const getRoute = createRoute({
@@ -36,8 +36,8 @@ const getRoute = createRoute({
 
 app.openapi(getRoute, async (c) => {
   const { id } = c.req.valid("param");
-  const agent = await getAgent(id);
-  return c.json(agentToJson(agent), 200);
+  const principal = await getPrincipal(id);
+  return c.json(principalToJson(principal), 200);
 });
 
 const createRouteDef = createRoute({
@@ -50,7 +50,7 @@ const createRouteDef = createRoute({
         "application/json": {
           schema: z.object({
             displayName: z.string().min(1),
-            kind: z.enum(["buzz", "openclaw", "claude", "codex", "manual"]),
+            kind: z.enum(["buzz", "openclaw", "claude", "codex", "manual", "human"]),
             externalId: z.string().optional(),
             role: z.enum(["owner", "editor", "viewer"]).optional(),
             metadata: z.record(z.unknown()).optional(),
@@ -67,10 +67,10 @@ const createRouteDef = createRoute({
 });
 
 app.openapi(createRouteDef, async (c) => {
-  requireRole(c.get("agent"), ["owner", "editor"]);
+  requireRole(c.get("principal"), ["owner", "editor"]);
   const body = c.req.valid("json");
-  const agent = await createAgent(body);
-  return c.json(agentToJson(agent), 201);
+  const principal = await createPrincipal(body);
+  return c.json(principalToJson(principal), 201);
 });
 
 export default app;

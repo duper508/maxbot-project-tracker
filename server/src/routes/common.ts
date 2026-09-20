@@ -17,7 +17,7 @@ export const listResponse = <T extends z.ZodTypeAny>(itemSchema: T) =>
 export const agentSchema = z.object({
   id: z.string().uuid(),
   displayName: z.string(),
-  kind: z.enum(["buzz", "openclaw", "claude", "codex", "manual"]),
+  kind: z.enum(["buzz", "openclaw", "claude", "codex", "manual", "human"]),
   externalId: z.string().optional(),
   role: z.enum(["owner", "editor", "viewer"]),
   avatarUrl: z.string().optional(),
@@ -80,9 +80,11 @@ export const resourceSchema = z.object({
 
 export const activitySchema = z.object({
   id: z.string().uuid(),
-  taskId: z.string().uuid(),
+  taskId: z.string().uuid().nullish(),
   actorId: z.string().uuid(),
   action: z.string(),
+  targetType: z.string().optional(),
+  targetId: z.string().uuid().optional(),
   fromValue: z.string().optional(),
   toValue: z.string().optional(),
   createdAt: z.number(),
@@ -144,6 +146,8 @@ export function activityToJson(activity: import("../db/schema.js").Activity) {
     taskId: activity.taskId,
     actorId: activity.actorId,
     action: activity.action,
+    targetType: activity.targetType ?? undefined,
+    targetId: activity.targetId ?? undefined,
     fromValue: activity.fromValue ?? undefined,
     toValue: activity.toValue ?? undefined,
     createdAt: activity.createdAt.getTime(),

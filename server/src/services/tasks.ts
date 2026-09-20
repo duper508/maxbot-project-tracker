@@ -6,7 +6,7 @@ import { generateId, now } from "../lib/id.js";
 import { notFound, badRequest } from "../lib/errors.js";
 import { createActivity } from "./activities.js";
 import { getBoard, type BoardColumnInput } from "./boards.js";
-import { getAgent } from "./agents.js";
+import { getPrincipal } from "./agents.js";
 
 const PAGE_SIZE = 100;
 
@@ -56,7 +56,7 @@ async function validateStatus(boardId: string, status: string): Promise<string> 
 
 async function validateAssignee(assigneeId?: string | null): Promise<string | undefined> {
   if (assigneeId === null || assigneeId === undefined) return undefined;
-  await getAgent(assigneeId);
+  await getPrincipal(assigneeId);
   return assigneeId;
 }
 
