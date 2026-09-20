@@ -663,11 +663,33 @@ A1 and A2 PRs against section 6.
   the posture every fresh deploy already has, and because the alternative kept both
   shell-dependent recovery and an unknown-entropy `OWNER_TOKEN` alive indefinitely.
   Raised the unspecified `>1` adoption case, now a fail-closed row in 2.2.
+- **Duper508** (owner, 2026-09-20) — greenlit section 8. All nine decisions are
+  locked and implementation of A1 is authorised. Also took email delivery off the
+  open-questions list by owning it directly (section 9).
+- **Drone** (infrastructure, 2026-09-19) — reviewed self-hosted SMTP for
+  `10ktechnology.com` against the invite requirement. Recommended generic
+  provider-backed SMTP configured through the owner UI over operating a mail server;
+  reasoning recorded in section 9.
 
-## 9. Open questions for the owner
+## 9. Owner questions — resolved
 
-- **Email delivery.** Inviting a human currently means the owner reads a generated
-  temporary password off the screen and hands it over. Real invite emails need SMTP
-  config — worth it, or is hand-off fine for an instance with one human?
-- **Nostr / NIP-07 login.** v1 listed it as post-MVP. Password auth makes it
-  optional rather than necessary. Still wanted?
+- **Email delivery: in scope.** The owner is selecting a delivery solution
+  (2026-09-20). Drone's infrastructure review recommends *against* self-hosting a
+  relay for MVP — standing one up is ordinary sysadmin work, but deliverability and
+  IP reputation become a permanent operational burden. The app therefore stores
+  delivery credentials as DB-backed, UI-managed secret settings (section 3.3) and
+  points at whatever provider the owner picks. Nothing about this blocks A1; the
+  settings keys land in A2 once the provider's shape is known — see the open item
+  below. Until invites ship, the generated-temporary-password hand-off in section 5
+  remains the fallback and is not removed.
+- **Nostr / NIP-07 login: deferred.** Not in MVP. Password auth makes it a
+  convenience rather than a capability, and it is a second authentication path to
+  secure. Revisit once agents log in through the UI.
+
+### 9.1 Still open
+
+- **Provider shape for email.** SMTP submission and a provider HTTP API are
+  different settings schemas — `smtp.host` / `smtp.port` / `smtp.user` /
+  `smtp.password` / `smtp.from` / `smtp.tls` versus a single API token plus a
+  verified sender. A2 needs the owner's answer before the email settings tab is
+  designed; it does not need it before A1.
