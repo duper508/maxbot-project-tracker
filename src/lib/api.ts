@@ -1,4 +1,4 @@
-import type { Agent, Board, Task, Activity, TaskStatus } from "../types";
+import type { Agent, Board, Task, Activity, TaskStatus, PrincipalRole } from "../types";
 import type { TaskDraft } from "../hooks/useBoardData";
 
 const API_BASE = "/api/v1";
@@ -103,6 +103,11 @@ function apiAgentToAgent(raw: Record<string, unknown>): Agent {
     avatarUrl: raw.avatarUrl ? String(raw.avatarUrl) : undefined,
     initials: String(raw.initials),
     color: String(raw.color),
+    email: raw.email ? String(raw.email) : undefined,
+    role: raw.role ? (String(raw.role) as Agent["role"]) : undefined,
+    status: raw.status ? (String(raw.status) as Agent["status"]) : undefined,
+    mustChangePassword:
+      typeof raw.mustChangePassword === "boolean" ? raw.mustChangePassword : undefined,
   };
 }
 
@@ -141,10 +146,57 @@ interface ListResponse<T> {
   nextCursor?: string;
 }
 
-export async function login(token: string): Promise<void> {
-  await request<{ ok: boolean }>("/auth/login", {
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface LoginPrincipal {
+  id: string;
+  displayName: string;
+  email: string;
+  role: PrincipalRole;
+  mustChangePassword: boolean;
+}
+
+export type LoginResult =
+  | { kind: "session"; principal: LoginPrincipal }
+  | {
+      kind: "must-change-password";
+      principal: LoginPrincipal;
+      ticket: string;
+      ticketExpiresAt: number;
+    };
+
+export async function login(credentials: LoginCredentials): Promise<LoginResult> {
+  const res = await request<{
+    principal: LoginPrincipal;
+    ticket?: string;
+    ticketExpiresAt?: number;
+  }>("/auth/login", {
     method: "POST",
-    body: JSON.stringify({ token }),
+    body: JSON.stringify(credentials),
+  });
+
+  if (res.principal.mustChangePassword && res.ticket && res.ticketExpiresAt) {
+    return {
+      kind: "must-change-password",
+      principal: res.principal,
+      ticket: res.ticket,
+      ticketExpiresAt: res.ticketExpiresAt,
+    };
+  }
+
+  return { kind: "session", principal: res.principal };
+}
+
+export async function changePasswordWithTicket(
+  ticket: string,
+  newPassword: string
+): Promise<void> {
+  await request<{ ok: boolean }>("/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify({ ticket, newPassword }),
   });
 }
 

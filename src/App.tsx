@@ -8,12 +8,16 @@ import { TimelineView } from "./components/TimelineView";
 import { TaskDialog } from "./components/TaskDialog";
 import { EmptyState } from "./components/EmptyState";
 import { LoginDialog } from "./components/LoginDialog";
+import { IdentitiesPage } from "./components/IdentitiesPage";
 import { useBoardData, type ViewMode } from "./hooks/useBoardData";
 import { Loader2 } from "lucide-react";
 import type { Task } from "./types";
 
+type AppPage = "board" | "identities";
+
 function App() {
   const [view, setView] = useState<ViewMode>("board");
+  const [page, setPage] = useState<AppPage>("board");
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const {
@@ -24,6 +28,7 @@ function App() {
     moveTask,
     createTask,
     login,
+    changePasswordWithTicket,
   } = useBoardData();
 
   const handleTaskClick = (task: Task) => {
@@ -40,24 +45,34 @@ function App() {
 
   return (
     <div className="flex h-screen bg-[var(--color-surface)]">
-      <Sidebar />
+      <Sidebar activePage={page} onPageChange={setPage} />
 
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <TopBar
-          boardName={data.board.name || "Buzz Kanban"}
-          view={view}
-          onViewChange={setView}
-          onNewTask={() => {
-            setSelectedTask(null);
-            setDialogOpen(true);
-          }}
-        />
+        {page === "board" ? (
+          <TopBar
+            boardName={data.board.name || "Buzz Kanban"}
+            view={view}
+            onViewChange={setView}
+            onNewTask={() => {
+              setSelectedTask(null);
+              setDialogOpen(true);
+            }}
+          />
+        ) : (
+          <header className="flex items-center justify-between gap-4 px-6 py-4 bg-white border-b border-[var(--color-border-soft)] sticky top-0 z-10">
+            <h2 className="text-lg font-semibold text-[var(--color-ink)]">
+              Identity management
+            </h2>
+          </header>
+        )}
 
-        <StatsBar
-          tasks={data.tasks}
-          activities={data.activities}
-          agents={data.agents}
-        />
+        {page === "board" && (
+          <StatsBar
+            tasks={data.tasks}
+            activities={data.activities}
+            agents={data.agents}
+          />
+        )}
 
         {isLoading ? (
           <div className="flex-1 flex items-center justify-center">
@@ -75,6 +90,8 @@ function App() {
             actionLabel={isUnauthorized ? undefined : "Try again"}
             onAction={isUnauthorized ? undefined : () => window.location.reload()}
           />
+        ) : page === "identities" ? (
+          <IdentitiesPage principals={data.agents} />
         ) : data.tasks.length === 0 ? (
           <EmptyState
             title="No tasks on this board"
@@ -119,7 +136,11 @@ function App() {
         }}
       />
 
-      <LoginDialog open={isUnauthorized} onLogin={login} />
+      <LoginDialog
+        open={isUnauthorized}
+        onLogin={login}
+        onChangePassword={changePasswordWithTicket}
+      />
     </div>
   );
 }

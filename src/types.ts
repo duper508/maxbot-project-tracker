@@ -1,14 +1,22 @@
 export type Priority = "low" | "medium" | "high" | "urgent";
 export type TaskStatus = "backlog" | "in-progress" | "review" | "done";
 
+export type PrincipalKind = "buzz" | "openclaw" | "claude" | "codex" | "manual" | "human";
+export type PrincipalRole = "owner" | "editor" | "viewer";
+export type PrincipalStatus = "active" | "disabled";
+
 export interface Agent {
   id: string;
   displayName: string;
-  kind: "buzz" | "openclaw" | "claude" | "codex" | "manual";
+  kind: PrincipalKind;
   externalId?: string;
   avatarUrl?: string;
   initials: string;
   color: string;
+  email?: string;
+  role?: PrincipalRole;
+  status?: PrincipalStatus;
+  mustChangePassword?: boolean;
 }
 
 export interface BoardColumn {

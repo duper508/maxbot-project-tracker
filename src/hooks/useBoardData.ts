@@ -9,7 +9,9 @@ import {
   moveTask as apiMoveTask,
   updateTask as apiUpdateTask,
   login as apiLogin,
+  changePasswordWithTicket as apiChangePasswordWithTicket,
   isApiError,
+  type LoginCredentials,
 } from "../lib/api";
 
 export type ViewMode = "board" | "list" | "timeline";
@@ -40,7 +42,8 @@ interface UseBoardDataResult {
   moveTask: (taskId: string, newStatus: string) => Promise<void>;
   createTask: (draft: TaskDraft) => Promise<Task>;
   updateTask: (taskId: string, updates: Partial<Omit<Task, "id" | "createdAt" | "updatedAt">>) => Promise<Task>;
-  login: (token: string) => Promise<void>;
+  login: (credentials: LoginCredentials) => Promise<{ mustChangePassword: false } | { mustChangePassword: true; ticket: string; email: string }>;
+  changePasswordWithTicket: (ticket: string, newPassword: string, email: string) => Promise<void>;
 }
 
 const emptyBoard: Board = {
@@ -172,10 +175,27 @@ export function useBoardData(): UseBoardDataResult {
     []
   );
 
-  const login = useCallback(async (token: string) => {
-    await apiLogin(token);
+  const login = useCallback(async (credentials: LoginCredentials) => {
+    const result = await apiLogin(credentials);
+    if (result.kind === "must-change-password") {
+      return {
+        mustChangePassword: true as const,
+        ticket: result.ticket,
+        email: credentials.email,
+      };
+    }
     await load();
+    return { mustChangePassword: false as const };
   }, [load]);
+
+  const changePasswordWithTicket = useCallback(
+    async (ticket: string, newPassword: string, email: string) => {
+      await apiChangePasswordWithTicket(ticket, newPassword);
+      await apiLogin({ email, password: newPassword });
+      await load();
+    },
+    [load]
+  );
 
   return {
     data,
@@ -186,5 +206,6 @@ export function useBoardData(): UseBoardDataResult {
     createTask,
     updateTask,
     login,
+    changePasswordWithTicket,
   };
 }

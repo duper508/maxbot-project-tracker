@@ -10,19 +10,21 @@ import {
 import { cn } from "../lib/utils";
 
 interface SidebarProps {
+  activePage: "board" | "identities";
+  onPageChange: (page: "board" | "identities") => void;
   className?: string;
 }
 
 const navItems = [
-  { icon: LayoutGrid, label: "Boards", active: true },
-  { icon: ListTodo, label: "My tasks", active: false },
-  { icon: Search, label: "Search", active: false },
-  { icon: Bell, label: "Activity", active: false },
-  { icon: Users, label: "Agents", active: false },
-  { icon: Settings, label: "Settings", active: false },
+  { icon: LayoutGrid, label: "Boards", page: "board" as const, disabled: false },
+  { icon: ListTodo, label: "My tasks", page: "board" as const, disabled: true },
+  { icon: Search, label: "Search", page: "board" as const, disabled: true },
+  { icon: Bell, label: "Activity", page: "board" as const, disabled: true },
+  { icon: Users, label: "Identities", page: "identities" as const, disabled: false },
+  { icon: Settings, label: "Settings", page: "identities" as const, disabled: true },
 ];
 
-export function Sidebar({ className }: SidebarProps) {
+export function Sidebar({ activePage, onPageChange, className }: SidebarProps) {
   return (
     <aside
       className={cn(
@@ -42,20 +44,23 @@ export function Sidebar({ className }: SidebarProps) {
 
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
         {navItems.map((item) => (
-          <a
+          <button
             key={item.label}
-            href="#"
-            onClick={(e) => e.preventDefault()}
+            type="button"
+            onClick={() => {
+              if (!item.disabled) onPageChange(item.page);
+            }}
+            disabled={item.disabled}
             className={cn(
-              "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-              item.active
+              "flex w-full items-center gap-3 px-3 py-2 rounded-md text-left text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45",
+              activePage === item.page && !item.disabled
                 ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
                 : "text-white/70 hover:bg-white/10 hover:text-white"
             )}
           >
             <item.icon className="h-4 w-4" aria-hidden="true" />
             {item.label}
-          </a>
+          </button>
         ))}
       </nav>
 
