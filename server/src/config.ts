@@ -23,6 +23,19 @@ export const envSchema = z.object({
   BUZZ_RELAY_URL: z.string().optional(),
   BUZZ_SERVICE_PUBKEY: z.string().optional(),
   BUZZ_VERIFY_SIGNATURES: z.enum(["true", "false"]).default("true"),
+  // Email is disabled unless explicitly configured. SMTP is the portable
+  // default provider; MCP supports the instance's existing email service.
+  EMAIL_PROVIDER: z.enum(["none", "smtp", "mcp"]).default("none"),
+  EMAIL_FROM_ADDRESS: z.string().email().optional(),
+  EMAIL_FROM_NAME: z.string().min(1).optional(),
+  EMAIL_SMTP_HOST: z.string().min(1).optional(),
+  EMAIL_SMTP_PORT: z.coerce.number().int().min(1).max(65535).optional(),
+  EMAIL_SMTP_USER: z.string().optional(),
+  EMAIL_SMTP_PASSWORD: z.string().optional(),
+  EMAIL_SMTP_TLS: z.enum(["starttls", "implicit", "none"]).default("starttls"),
+  EMAIL_MCP_ENDPOINT: z.string().url().optional(),
+  EMAIL_MCP_ACCOUNT_ID: z.string().min(1).optional(),
+  EMAIL_MCP_TOKEN: z.string().min(1).optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

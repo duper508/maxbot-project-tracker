@@ -27,6 +27,8 @@ export async function createActivity(
     taskId: input.taskId,
     actorId: input.actorId,
     action: input.action,
+    targetType: input.targetType ?? null,
+    targetId: input.targetId ?? null,
     fromValue: input.fromValue ?? null,
     toValue: input.toValue ?? null,
     payload: input.payload ?? null,
