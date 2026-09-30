@@ -229,8 +229,8 @@ detaches the live board's history.
 
 The `>1` row is unreachable today: `seedDatabase` guarantees a single owner row and
 no human principal can be created before auth exists. It is specified anyway because
-an invite flow that creates a human before their first password — §9's SMTP question
-leads straight there — would make it reachable, and at that point picking one
+an invite flow that creates a human before their first password — §9's email-delivery
+question leads straight there — would make it reachable, and at that point picking one
 candidate arbitrarily means adopting the wrong row. Failing closed is recoverable;
 an arbitrary adoption is not.
 
@@ -679,17 +679,60 @@ A1 and A2 PRs against section 6.
   IP reputation become a permanent operational burden. The app therefore stores
   delivery credentials as DB-backed, UI-managed secret settings (section 3.3) and
   points at whatever provider the owner picks. Nothing about this blocks A1; the
-  settings keys land in A2 once the provider's shape is known — see the open item
-  below. Until invites ship, the generated-temporary-password hand-off in section 5
-  remains the fallback and is not removed.
+  settings keys land in A2 — the provider's shape is settled in 9.1. Until invites
+  ship, the generated-temporary-password hand-off in section 5 remains the fallback
+  and is not removed.
 - **Nostr / NIP-07 login: deferred.** Not in MVP. Password auth makes it a
   convenience rather than a capability, and it is a second authentication path to
   secure. Revisit once agents log in through the UI.
 
-### 9.1 Still open
+### 9.1 Provider shape for email — resolved
 
-- **Provider shape for email.** SMTP submission and a provider HTTP API are
-  different settings schemas — `smtp.host` / `smtp.port` / `smtp.user` /
-  `smtp.password` / `smtp.from` / `smtp.tls` versus a single API token plus a
-  verified sender. A2 needs the owner's answer before the email settings tab is
-  designed; it does not need it before A1.
+**Duper508 (owner, 2026-09-30): email delivery is pluggable. SMTP stays; an MCP
+email server is added as a second provider kind.**
+
+The question as originally posed was a binary — SMTP submission *or* a provider
+HTTP API, two different settings schemas. The answer is neither branch alone. This
+instance will deliver through an MCP email server, but Buzz Kanban is meant to be
+universally deployable, and SMTP is the option every operator can satisfy without
+depending on a service we do not ship. Removing it would make the app deployable
+only where an MCP email server already exists.
+
+So `email.provider` selects the kind, and the rest of the schema follows from it:
+
+```
+email.provider          'smtp' | 'mcp' | 'none'     (default 'none')
+email.fromAddress       envelope sender, all kinds
+email.fromName          display name, all kinds
+
+# email.provider = 'smtp'
+email.smtp.host
+email.smtp.port
+email.smtp.user
+email.smtp.password     secret
+email.smtp.tls          'starttls' | 'implicit' | 'none'
+
+# email.provider = 'mcp'
+email.mcp.endpoint      streamable-HTTP MCP URL
+email.mcp.accountId     account_id passed to email_send_message
+email.mcp.token         secret, bearer
+```
+
+Secrets follow section 3.3: `isSecret = 1`, write-only over the API, never returned
+in plaintext. `email.provider = 'none'` is the default and the fallback described in
+section 5 (generated temporary password, handed over out of band) stays available
+whenever no provider is configured — it is not removed by either kind shipping.
+
+Two constraints on the `mcp` kind, both learned from probing a live server
+(`mcp-email-server` 1.30.0):
+
+- Responses are **SSE-framed** (`Content-Type: text/event-stream`, `data:`-prefixed)
+  even for a single `tools/call`. A naive JSON parse of the response body fails.
+- `initialize` must complete, with a `protocolVersion`, before `tools/call`.
+
+The token stored in `email.mcp.token` should be **send-only**. A key that also
+carries read or modify scope gives the Kanban instance the ability to read the
+owner's mailbox, which nothing in this spec needs.
+
+Nothing here blocks A1. The settings keys and the provider-kind selector land in A2
+with the email settings tab.
