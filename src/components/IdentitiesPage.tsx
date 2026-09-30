@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { KeyRound, Shield, UserPlus, Users } from "lucide-react";
 import type { Agent } from "../types";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
+import { ApiKeysDialog } from "./ApiKeysDialog";
 
 interface IdentitiesPageProps {
   principals: Agent[];
@@ -12,6 +14,14 @@ function displayKind(kind: Agent["kind"]): string {
 }
 
 export function IdentitiesPage({ principals }: IdentitiesPageProps) {
+  const [selectedPrincipal, setSelectedPrincipal] = useState<Agent | null>(null);
+  const [keysOpen, setKeysOpen] = useState(false);
+
+  const openKeys = (principal: Agent) => {
+    setSelectedPrincipal(principal);
+    setKeysOpen(true);
+  };
+
   return (
     <section className="flex-1 overflow-y-auto bg-[var(--color-surface)]">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-5 sm:px-6 lg:px-8">
@@ -29,7 +39,14 @@ export function IdentitiesPage({ principals }: IdentitiesPageProps) {
               <UserPlus className="h-4 w-4" aria-hidden="true" />
               Add human
             </Button>
-            <Button variant="secondary" disabled title="Waiting on #17 key endpoints">
+            <Button
+              variant="secondary"
+              disabled={!principals.some((principal) => principal.kind !== "human")}
+              onClick={() => {
+                const firstAgent = principals.find((principal) => principal.kind !== "human");
+                if (firstAgent) openKeys(firstAgent);
+              }}
+            >
               <KeyRound className="h-4 w-4" aria-hidden="true" />
               Mint key
             </Button>
@@ -105,7 +122,16 @@ export function IdentitiesPage({ principals }: IdentitiesPageProps) {
                       {principal.externalId ?? "-"}
                     </td>
                     <td className="px-4 py-3">
-                      <Button variant="ghost" size="sm" disabled title="Waiting on #17">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openKeys(principal)}
+                        title={
+                          principal.kind === "human"
+                            ? "Human identities cannot mint API keys"
+                            : "Manage API keys"
+                        }
+                      >
                         Manage keys
                       </Button>
                     </td>
@@ -121,6 +147,11 @@ export function IdentitiesPage({ principals }: IdentitiesPageProps) {
           )}
         </div>
       </div>
+      <ApiKeysDialog
+        principal={selectedPrincipal}
+        open={keysOpen}
+        onOpenChange={setKeysOpen}
+      />
     </section>
   );
 }
