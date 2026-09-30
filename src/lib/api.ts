@@ -1,4 +1,4 @@
-import type { Agent, Board, Task, Activity, TaskStatus, PrincipalRole } from "../types";
+import type { Agent, ApiKey, Board, Task, Activity, TaskStatus, PrincipalRole } from "../types";
 import type { TaskDraft } from "../hooks/useBoardData";
 
 const API_BASE = "/api/v1";
@@ -200,6 +200,18 @@ export async function changePasswordWithTicket(
   });
 }
 
+function apiKeyToApiKey(raw: Record<string, unknown>): ApiKey {
+  return {
+    id: String(raw.id),
+    name: String(raw.name),
+    prefix: String(raw.prefix),
+    createdAt: Number(raw.createdAt),
+    lastUsedAt: raw.lastUsedAt ? Number(raw.lastUsedAt) : undefined,
+    expiresAt: raw.expiresAt ? Number(raw.expiresAt) : undefined,
+    revokedAt: raw.revokedAt ? Number(raw.revokedAt) : undefined,
+  };
+}
+
 export async function completePasswordChange(
   ticket: string,
   email: string,
@@ -235,6 +247,29 @@ export async function listTasks(boardId: string): Promise<Task[]> {
 export async function listAgents(): Promise<Agent[]> {
   const agents = await request<Record<string, unknown>[]>("/agents");
   return agents.map(apiAgentToAgent);
+}
+
+export async function listAgentApiKeys(agentId: string): Promise<ApiKey[]> {
+  const keys = await request<Record<string, unknown>[]>(`/agents/${agentId}/keys`);
+  return keys.map(apiKeyToApiKey);
+}
+
+export async function createAgentApiKey(
+  agentId: string,
+  name: string
+): Promise<{ apiKey: ApiKey; token: string }> {
+  const res = await request<{ apiKey: Record<string, unknown>; token: string }>(
+    `/agents/${agentId}/keys`,
+    {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    }
+  );
+  return { apiKey: apiKeyToApiKey(res.apiKey), token: res.token };
+}
+
+export async function revokeAgentApiKey(agentId: string, keyId: string): Promise<void> {
+  await request<void>(`/agents/${agentId}/keys/${keyId}`, { method: "DELETE" });
 }
 
 export async function listActivities(limit = 20): Promise<Activity[]> {

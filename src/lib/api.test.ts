@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { completePasswordChange, login } from "./api";
+import {
+  completePasswordChange,
+  createAgentApiKey,
+  listAgentApiKeys,
+  login,
+  revokeAgentApiKey,
+} from "./api";
 
 function sessionResponse() {
   return new Response(
@@ -118,6 +124,100 @@ describe("login", () => {
           password: "new-password-123",
         }),
       })
+    );
+  });
+});
+
+describe("agent API keys", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("lists key metadata without a token", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify([
+          {
+            id: "11111111-1111-1111-1111-111111111111",
+            name: "Production",
+            prefix: "abc123def456",
+            createdAt: 1790758000000,
+            lastUsedAt: 1790759000000,
+          },
+        ]),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }
+      )
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const keys = await listAgentApiKeys("agent-1");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/agents/agent-1/keys",
+      expect.objectContaining({ credentials: "include" })
+    );
+    expect(keys).toEqual([
+      {
+        id: "11111111-1111-1111-1111-111111111111",
+        name: "Production",
+        prefix: "abc123def456",
+        createdAt: 1790758000000,
+        lastUsedAt: 1790759000000,
+      },
+    ]);
+    expect(JSON.stringify(keys)).not.toContain("bzk_");
+  });
+
+  it("creates a key and returns the one-time token", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          apiKey: {
+            id: "11111111-1111-1111-1111-111111111111",
+            name: "Production",
+            prefix: "abc123def456",
+            createdAt: 1790758000000,
+          },
+          token: "bzk_abc123def456_secret",
+        }),
+        {
+          status: 201,
+          headers: { "Content-Type": "application/json" },
+        }
+      )
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const created = await createAgentApiKey("agent-1", "Production");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/agents/agent-1/keys",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ name: "Production" }),
+      })
+    );
+    expect(created.token).toBe("bzk_abc123def456_secret");
+    expect(created.apiKey).toEqual({
+      id: "11111111-1111-1111-1111-111111111111",
+      name: "Production",
+      prefix: "abc123def456",
+      createdAt: 1790758000000,
+    });
+  });
+
+  it("revokes a key", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await revokeAgentApiKey("agent-1", "key-1");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/agents/agent-1/keys/key-1",
+      expect.objectContaining({ method: "DELETE" })
     );
   });
 });

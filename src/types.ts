@@ -19,6 +19,16 @@ export interface Agent {
   mustChangePassword?: boolean;
 }
 
+export interface ApiKey {
+  id: string;
+  name: string;
+  prefix: string;
+  createdAt: number;
+  lastUsedAt?: number;
+  expiresAt?: number;
+  revokedAt?: number;
+}
+
 export interface BoardColumn {
   id: string;
   title: string;
