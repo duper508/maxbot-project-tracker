@@ -25,6 +25,16 @@ export const agentSchema = z.object({
   color: z.string(),
 });
 
+export const apiKeySchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  prefix: z.string(),
+  createdAt: z.number(),
+  lastUsedAt: z.number().optional(),
+  expiresAt: z.number().optional(),
+  revokedAt: z.number().optional(),
+});
+
 export const boardColumnSchema = z.object({
   id: z.string(),
   title: z.string(),
