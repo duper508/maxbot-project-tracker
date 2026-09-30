@@ -63,7 +63,7 @@ If it expires, restart the container and a new one is printed.
 Create the owner account with it:
 
 ```bash
-curl -X POST http://localhost:8380/api/v1/setup   -H "Content-Type: application/json"   -d '{
+curl -X POST http://127.0.0.1:8380/api/v1/setup   -H "Content-Type: application/json"   -d '{
     "setupToken":"<token-from-the-log>",
     "email":"owner@example.com",
     "displayName":"Owner",
@@ -82,15 +82,15 @@ restart, unless you are deliberately migrating a v1 instance through the claim p
 
 ```bash
 # Health check
-curl http://localhost:8380/health
+curl http://127.0.0.1:8380/health
 
 # Login (use the owner email and password created in the activation step)
-curl -c cookies.txt -X POST http://localhost:8380/api/v1/auth/login \
+curl -c cookies.txt -X POST http://127.0.0.1:8380/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"owner@example.com","password":"the-password-you-set"}'
 
 # List boards
-curl -b cookies.txt http://localhost:8380/api/v1/boards
+curl -b cookies.txt http://127.0.0.1:8380/api/v1/boards
 ```
 
 ### 6. Updating
@@ -110,7 +110,7 @@ apps.10ktechnology.com {
     # ... existing sub-sites ...
 
     handle_path /kanban/* {
-        reverse_proxy localhost:8380 {
+        reverse_proxy 127.0.0.1:8380 {
             trusted_proxies 127.0.0.1
         }
     }
@@ -192,7 +192,8 @@ JWT_EXPIRY=7d
 OWNER_TOKEN=
 # Imported once at first boot. Format: role:Name:bzk_<prefix>_<secret>
 # The example values below are placeholders and will be skipped. Generate real keys with the
-# generateApiKey helper in server/src/lib/auth.ts (a settings UI lands in A2).
+# Settings > Identities UI, or POST /api/v1/agents/:id/keys. This env var is only for
+# first-boot seeding of a brand-new instance.
 AGENT_API_KEYS=owner:OpenClaw:bzk_exampleaaaaa_donotusereplacegeneratedkeyy,editor:Hexagon:bzk_examplebbbbb_donotusereplacegeneratedkeyy
 BUZZ_RELAY_URL=wss://buzz.10ktechnology.com
 BUZZ_SERVICE_PUBKEY=<hex-pubkey-for-buzz-webhook-verification>
@@ -201,7 +202,9 @@ BUZZ_VERIFY_SIGNATURES=true
 
 Notes:
 - `OWNER_TOKEN` is a legacy v1 credential and must stay empty on fresh installs — a non-empty value arms the claim path and makes `POST /api/v1/setup` return `409 CLAIM_REQUIRED`. On migrated instances it is consumed once during the claim window. Humans log in with email + password at `POST /api/v1/auth/login`.
-- `AGENT_API_KEYS` format: `role:Name:bzk_<prefix>_<secret>`. Roles can be `owner`, `editor`, or `viewer`. Example/placeholder keys are skipped at seed time; generate real keys with the `generateApiKey` helper in `server/src/lib/auth.ts`. A settings UI for key management lands in A2.
+- `AGENT_API_KEYS` format: `role:Name:bzk_<prefix>_<secret>`. Roles can be `owner`, `editor`, or `viewer`. Example/placeholder keys are skipped at seed time.
+
+  **This variable is only for seeding a brand-new instance.** It is imported once at first boot and ignored afterwards, so adding a key here does nothing on an instance that has already been seeded. Mint keys through **Settings > Identities** in the UI, or `POST /api/v1/agents/:id/keys` — the token is shown once and never retrievable again. Keys can be listed and revoked from the same place; revocation takes effect on the key's next request.
 - `APP_SECRET` must be exactly 64 hex characters and cannot be an obvious placeholder; the server fails closed on boot if it is missing, malformed, or weak.
 - `TRUSTED_PROXY_CIDR` must match the actual socket peer the app sees. For Docker Compose that is the bridge gateway/subnet (see `.env.example`), not `127.0.0.1/32`. When unset, rate limits key on the socket peer address and `X-Forwarded-For` is ignored to prevent spoofing.
 - Ensure the SQLite parent directory exists and is writable: `mkdir -p /home/lance/kanban-data`.
@@ -285,7 +288,7 @@ apps.10ktechnology.com {
     # ... existing sub-sites ...
 
     handle_path /kanban/* {
-        reverse_proxy localhost:8380 {
+        reverse_proxy 127.0.0.1:8380 {
             trusted_proxies 127.0.0.1
         }
     }
