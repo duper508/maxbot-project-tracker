@@ -1,14 +1,17 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { apiKeys } from "../db/schema.js";
 import type { ApiKey } from "../db/schema.js";
 import { generateApiKey } from "../lib/auth.js";
 import { generateId, now } from "../lib/id.js";
-import { notFound } from "../lib/errors.js";
+import { badRequest, notFound } from "../lib/errors.js";
 import { getPrincipal } from "./agents.js";
 
 export async function createApiKey(principalId: string, createdBy: string, name: string): Promise<{ apiKey: ApiKey; token: string }> {
-  await getPrincipal(principalId);
+  const principal = await getPrincipal(principalId);
+  if (principal.kind === "human") {
+    throw badRequest("API keys cannot be created for human principals");
+  }
 
   const generated = generateApiKey();
   const apiKey: ApiKey = {
@@ -42,7 +45,10 @@ export async function revokeApiKey(principalId: string, keyId: string): Promise<
 
   // The auth middleware reads this field from the database on every request,
   // so setting it makes the key unusable immediately.
-  await db.update(apiKeys).set({ revokedAt: now() }).where(eq(apiKeys.id, keyId));
+  await db
+    .update(apiKeys)
+    .set({ revokedAt: now() })
+    .where(and(eq(apiKeys.id, keyId), isNull(apiKeys.revokedAt)));
 }
 
 export function apiKeyToJson(apiKey: ApiKey) {

@@ -180,7 +180,11 @@ export async function resolvePrincipalByApiKey(fullKey: string): Promise<Princip
     .from(principals)
     .where(eq(principals.id, keyRow.principalId))
     .limit(1);
-  return principalRows[0] ?? null;
+  const principal = principalRows[0] ?? null;
+  if (!principal) return null;
+
+  await db.update(apiKeys).set({ lastUsedAt: new Date() }).where(eq(apiKeys.id, keyRow.id));
+  return principal;
 }
 
 // ---------------------------------------------------------------------------

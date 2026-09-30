@@ -61,7 +61,7 @@ describe("agent API key routes", () => {
 
     const listRes = await app.request(`/api/v1/agents/${agent.id}/keys`, { headers: { Cookie: ownerCookie } });
     expect(listRes.status).toBe(200);
-    const listed = await listRes.json() as unknown;
+    const listed = await listRes.json() as Array<{ lastUsedAt?: number; revokedAt?: number }>;
     expect(listed).toEqual([created.apiKey]);
     expect(JSON.stringify(listed)).not.toContain(created.token);
 
@@ -70,11 +70,27 @@ describe("agent API key routes", () => {
     });
     expect(usableRes.status).toBe(200);
 
+    const usedListRes = await app.request(`/api/v1/agents/${agent.id}/keys`, { headers: { Cookie: ownerCookie } });
+    expect((await usedListRes.json() as Array<{ lastUsedAt?: number }>)[0]?.lastUsedAt).toEqual(expect.any(Number));
+
     const revokeRes = await app.request(`/api/v1/agents/${agent.id}/keys/${created.apiKey.id}`, {
       method: "DELETE",
       headers: { Cookie: ownerCookie },
     });
     expect(revokeRes.status).toBe(204);
+
+    const revokedListRes = await app.request(`/api/v1/agents/${agent.id}/keys`, { headers: { Cookie: ownerCookie } });
+    const firstRevokedAt = (await revokedListRes.json() as Array<{ revokedAt?: number }>)[0]?.revokedAt;
+    expect(firstRevokedAt).toEqual(expect.any(Number));
+
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    const reRevokeRes = await app.request(`/api/v1/agents/${agent.id}/keys/${created.apiKey.id}`, {
+      method: "DELETE",
+      headers: { Cookie: ownerCookie },
+    });
+    expect(reRevokeRes.status).toBe(204);
+    const reRevokedListRes = await app.request(`/api/v1/agents/${agent.id}/keys`, { headers: { Cookie: ownerCookie } });
+    expect((await reRevokedListRes.json() as Array<{ revokedAt?: number }>)[0]?.revokedAt).toBe(firstRevokedAt);
 
     const rejectedRes = await app.request("/api/v1/agents", {
       headers: { Authorization: `Bearer ${created.token}` },
@@ -86,7 +102,7 @@ describe("agent API key routes", () => {
     const ownerCookie = await setupOwner();
     const agentRes = await post(
       "/api/v1/agents",
-      { displayName: "Editor", kind: "human", role: "editor" },
+      { displayName: "Editor", kind: "codex", role: "editor" },
       { Cookie: ownerCookie },
     );
     const editor = await agentRes.json() as AgentJson;
@@ -114,5 +130,24 @@ describe("agent API key routes", () => {
       headers: { Authorization: `Bearer ${key.token}` },
     });
     expect(revokeRes.status).toBe(403);
+  });
+
+  it("refuses to mint API keys for human principals", async () => {
+    const ownerCookie = await setupOwner();
+    const humanRes = await post(
+      "/api/v1/agents",
+      { displayName: "Human User", kind: "human", role: "viewer" },
+      { Cookie: ownerCookie },
+    );
+    expect(humanRes.status).toBe(201);
+    const human = await humanRes.json() as AgentJson;
+
+    const mintRes = await post(
+      `/api/v1/agents/${human.id}/keys`,
+      { name: "should-not-exist" },
+      { Cookie: ownerCookie },
+    );
+    expect(mintRes.status).toBe(400);
+    expect((await mintRes.json() as { error: { code: string } }).error.code).toBe("BAD_REQUEST");
   });
 });
