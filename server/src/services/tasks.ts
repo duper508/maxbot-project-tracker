@@ -7,6 +7,7 @@ import { notFound, badRequest } from "../lib/errors.js";
 import { createActivity } from "./activities.js";
 import { getBoard, type BoardColumnInput } from "./boards.js";
 import { getPrincipal } from "./agents.js";
+import { notifyTaskAssignee } from "./notifications.js";
 
 const PAGE_SIZE = 100;
 
@@ -121,6 +122,9 @@ export async function createTask(input: CreateTaskInput): Promise<Task> {
     toValue: status,
     payload: { title: input.title },
   });
+  if (task.assigneeId && task.assigneeId !== input.createdBy) {
+    await notifyTaskAssignee(task, input.createdBy, "assigned");
+  }
   return task;
 }
 
@@ -163,6 +167,17 @@ export async function updateTask(id: string, actorId: string, input: UpdateTaskI
       toValue: updated.status,
       payload: activityPayload,
     });
+  }
+
+  if (input.assigneeId !== undefined && input.assigneeId !== task.assigneeId && updated.assigneeId) {
+    await notifyTaskAssignee(updated, actorId, "assigned");
+  }
+  if (input.status !== undefined && input.status !== task.status) {
+    const board = await getBoard(updated.boardId);
+    const column = (board.columns as BoardColumnInput[]).find((candidate) => candidate.id === updated.status);
+    if (column && /blocked/i.test(column.title)) {
+      await notifyTaskAssignee(updated, actorId, "blocked");
+    }
   }
 
   return updated;

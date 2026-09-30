@@ -4,6 +4,8 @@ import { comments } from "../db/schema.js";
 import type { Comment, NewComment } from "../db/schema.js";
 import { generateId, now } from "../lib/id.js";
 import { createActivity } from "./activities.js";
+import { getTask } from "./tasks.js";
+import { notifyTaskAssignee } from "./notifications.js";
 
 export async function listComments(taskId: string): Promise<Comment[]> {
   return db.select().from(comments).where(eq(comments.taskId, taskId)).orderBy(desc(comments.createdAt));
@@ -25,6 +27,7 @@ export async function createComment(
     toValue: body.slice(0, 100),
     payload: { commentId: id },
   });
+  await notifyTaskAssignee(await getTask(taskId), agentId, "commented");
   return comment;
 }
 
