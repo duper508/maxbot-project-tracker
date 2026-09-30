@@ -200,6 +200,15 @@ export async function changePasswordWithTicket(
   });
 }
 
+export async function completePasswordChange(
+  ticket: string,
+  email: string,
+  newPassword: string
+): Promise<LoginResult> {
+  await changePasswordWithTicket(ticket, newPassword);
+  return login({ email, password: newPassword });
+}
+
 export async function logout(): Promise<void> {
   await request<{ ok: boolean }>("/auth/logout", {
     method: "POST",

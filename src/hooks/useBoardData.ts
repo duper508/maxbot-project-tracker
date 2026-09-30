@@ -9,7 +9,7 @@ import {
   moveTask as apiMoveTask,
   updateTask as apiUpdateTask,
   login as apiLogin,
-  changePasswordWithTicket as apiChangePasswordWithTicket,
+  completePasswordChange as apiCompletePasswordChange,
   isApiError,
   type LoginCredentials,
 } from "../lib/api";
@@ -190,8 +190,7 @@ export function useBoardData(): UseBoardDataResult {
 
   const changePasswordWithTicket = useCallback(
     async (ticket: string, newPassword: string, email: string) => {
-      await apiChangePasswordWithTicket(ticket, newPassword);
-      await apiLogin({ email, password: newPassword });
+      await apiCompletePasswordChange(ticket, email, newPassword);
       await load();
     },
     [load]
